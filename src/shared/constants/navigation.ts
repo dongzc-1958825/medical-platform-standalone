@@ -1,0 +1,161 @@
+﻿// 📁 src/shared/constants/navigation.ts
+// 统一的导航配置
+
+export interface NavItem {
+  id: string;
+  label: string;
+  icon: string;
+  path: string;
+  description?: string;
+  showInMobileNav: boolean;
+  showInDesktopNav: boolean;
+  isCoreFunction: boolean;
+  order: number;
+}
+
+export const NAV_ITEMS: NavItem[] = [
+  {
+    id: "home",
+    label: "首页",
+    icon: "🏠",
+    path: "/home",
+    description: "平台首页",
+    showInMobileNav: false,
+    showInDesktopNav: true,
+    isCoreFunction: true,
+    order: 1
+  },
+  {
+    id: "cases",
+    label: "医案分享",
+    icon: "📋",
+    path: "/cases",
+    description: "医案管理与分享",
+    showInMobileNav: true,
+    showInDesktopNav: true,
+    isCoreFunction: true,
+    order: 2
+  },
+  {
+    id: "community",
+    label: "专病社区",
+    icon: "👥",
+    path: "/community",
+    description: "疾病专项讨论社区",
+    showInMobileNav: true,
+    showInDesktopNav: true,
+    isCoreFunction: true,
+    order: 3
+  },
+  {
+    id: "consult",
+    label: "寻医问药",
+    icon: "❓",
+    path: "/consult",
+    description: "在线问诊与咨询",
+    showInMobileNav: true,
+    showInDesktopNav: true,
+    isCoreFunction: true,
+    order: 4
+  },
+  {
+    id: "messages",
+    label: "消息",
+    icon: "📢",
+    path: "/messages",
+    description: "消息与通知中心",
+    showInMobileNav: true,
+    showInDesktopNav: true,
+    isCoreFunction: true,
+    order: 5
+  },
+  {
+    id: "profile",
+    label: "我的",
+    icon: "👤",
+    path: "/profile",
+    description: "个人中心与设置",
+    showInMobileNav: true,
+    showInDesktopNav: true,
+    isCoreFunction: true,
+    order: 6
+  }
+];
+
+// 获取移动端底部导航项（5个固定功能）
+export function getMobileBottomNavItems(): NavItem[] {
+  return NAV_ITEMS
+    .filter(item => item.showInMobileNav)
+    .sort((a, b) => a.order - b.order);
+}
+
+// 获取桌面端顶部导航项
+export function getDesktopTopNavItems(): NavItem[] {
+  return NAV_ITEMS
+    .filter(item => item.showInDesktopNav)
+    .sort((a, b) => a.order - b.order);
+}
+
+// 获取核心功能项
+export function getCoreFunctions(): NavItem[] {
+  return NAV_ITEMS
+    .filter(item => item.isCoreFunction)
+    .sort((a, b) => a.order - b.order);
+}
+
+// 获取带设备前缀的路径
+export function getPathWithDevicePrefix(path: string, isMobile: boolean): string {
+  const devicePrefix = isMobile ? "/mobile" : "/desktop";
+  return devicePrefix + path;
+}
+
+// Logo点击后的菜单项
+export interface LogoMenuItem {
+  id: string;
+  label: string;
+  icon?: string;
+  action: "navigate" | "logout";
+  path?: string;
+  requiresAuth: boolean;
+}
+
+export const LOGO_MENU_ITEMS: LogoMenuItem[] = [
+  {
+    id: "login",
+    label: "登录",
+    icon: "🔑",
+    action: "navigate",
+    path: "/login",
+    requiresAuth: false
+  },
+  {
+    id: "register",
+    label: "注册",
+    icon: "📝",
+    action: "navigate",
+    path: "/register",
+    requiresAuth: false
+  },
+  {
+    id: "profile",
+    label: "个人中心",
+    icon: "👤",
+    action: "navigate",
+    path: "/profile",
+    requiresAuth: true
+  },
+  {
+    id: "logout",
+    label: "退出登录",
+    icon: "🚪",
+    action: "logout",
+    requiresAuth: true
+  }
+];
+
+// 获取Logo菜单项
+export function getLogoMenuItems(isAuthenticated: boolean): LogoMenuItem[] {
+  return LOGO_MENU_ITEMS.filter(item => 
+    !item.requiresAuth || (item.requiresAuth && isAuthenticated)
+  );
+}

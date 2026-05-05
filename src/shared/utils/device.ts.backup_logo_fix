@@ -1,0 +1,70 @@
+﻿// 📁 src/shared/utils/device.ts
+// 设备检测工具函数（可用于SSR环境）
+
+/**
+ * 检测是否是移动设备（基于用户代理）
+ * 可用于服务端渲染或初始检测
+ */
+export function isMobileUserAgent(): boolean {
+  if (typeof window === 'undefined') return false;
+  
+  const userAgent = window.navigator.userAgent.toLowerCase();
+  const mobileKeywords = [
+    'mobile', 'android', 'iphone', 'ipod', 'blackberry', 
+    'windows phone', 'webos', 'opera mini', 'iemobile'
+  ];
+  
+  return mobileKeywords.some(keyword => userAgent.includes(keyword));
+}
+
+/**
+ * 检测屏幕宽度是否小于等于指定断点
+ * @param breakpoint 断点宽度（px）
+ */
+export function isScreenWidthBelow(breakpoint: number): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.innerWidth <= breakpoint;
+}
+
+/**
+ * 检测是否是触摸设备
+ */
+export function isTouchDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+  return 'ontouchstart' in window || 
+         navigator.maxTouchPoints > 0 ||
+         (navigator as any).msMaxTouchPoints > 0;
+}
+
+/**
+ * 获取设备信息摘要
+ */
+export function getDeviceInfo() {
+  if (typeof window === 'undefined') {
+    return {
+      userAgent: '',
+      screenWidth: 0,
+      screenHeight: 0,
+      pixelRatio: 1,
+      isMobile: false,
+      isTouch: false,
+    };
+  }
+
+  return {
+    userAgent: window.navigator.userAgent,
+    screenWidth: window.screen.width,
+    screenHeight: window.screen.height,
+    pixelRatio: window.devicePixelRatio || 1,
+    isMobile: isMobileUserAgent(),
+    isTouch: isTouchDevice(),
+  };
+}
+
+/**
+ * App.tsx中使用的设备检测函数（保持兼容）
+ */
+export const isMobileDevice = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return window.innerWidth <= 768;
+};

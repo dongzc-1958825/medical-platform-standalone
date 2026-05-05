@@ -1,0 +1,481 @@
+// src/shared/services/resultFormatter.ts
+
+import { DrugInfo } from './drugDataService';
+
+/**
+ * 搜索结果格式化服务
+ * 将海量搜索结果整理成结构化卡片
+ * 让用户一目了然
+ */
+
+export interface FormattedDrugCard {
+  // 基本信息（一眼看到）
+  name: string;
+  category: string;
+  matchScore: number;
+  
+  // 关键信息（3-5条，最多）
+  keyPoints: string[];
+  
+  // 详细字段（点击展开）
+  details: {
+    indications: string[];
+    contraindications: string[];
+    usage: string;
+    sideEffects: string[];
+    manufacturer: string;
+    approvalNumber?: string;
+    insuranceType?: string;
+    price?: string;
+  };
+  
+  // 来源标记
+  source: '国产' | '进口' | '国际';
+  sourceLabel: string;
+  verified: boolean;
+  origin?: string;  // 添加 origin 字段
+  
+  // 操作
+  actions: {
+    collect: boolean;
+    share: boolean;
+    compare: boolean;
+  };
+}
+
+export interface FormattedCaseCard {
+  // 基本信息
+  title: string;
+  matchScore: number;
+  
+  // 关键信息（3-5条）
+  keyPoints: string[];
+  
+  // 详细字段
+  details?: {
+    patientInfo: string;
+    symptoms: string[];
+    diagnosis: string;
+    treatment: string;
+    efficacy: string;
+    hospital?: string;
+    doctor?: string;
+  };
+  
+  // 来源标记
+  source: 'platform' | 'yiigle' | 'pubmed';
+  sourceLabel: string;
+  
+  // 操作
+  actions: {
+    collect: boolean;
+    share: boolean;
+    reference: boolean;
+  };
+}
+
+class ResultFormatter {
+  
+  // 英文到中文的映射
+  private translationMap: Record<string, string> = {
+    // 药品名
+    'Gabapentin': '加巴喷丁',
+    'Pregabalin': '普瑞巴林',
+    'Amitriptyline': '阿米替林',
+    'Ibuprofen': '布洛芬',
+    'Aspirin': '阿司匹林',
+    'Metformin': '二甲双胍',
+    'Nifedipine': '硝苯地平',
+    'Duloxetine': '度洛西汀',
+    'Tramadol': '曲马多',
+    'Codeine': '可待因',
+    'Morphine': '吗啡',
+    'Oxycodone': '羟考酮',
+    
+    // 症状/适应症
+    'pain': '疼痛',
+    'neuropathic pain': '神经病理性疼痛',
+    'postherpetic neuralgia': '带状疱疹后神经痛',
+    'sciatica': '坐骨神经痛',
+    'diabetic neuropathy': '糖尿病性神经痛',
+    'headache': '头痛',
+    'migraine': '偏头痛',
+    'arthritis': '关节炎',
+    'rheumatoid arthritis': '类风湿关节炎',
+    'osteoarthritis': '骨关节炎',
+    'fever': '发热',
+    'cough': '咳嗽',
+    'cold': '感冒',
+    'flu': '流感',
+    'hypertension': '高血压',
+    'diabetes': '糖尿病',
+    'infection': '感染',
+    'inflammation': '炎症',
+    'allergy': '过敏',
+    
+    // 禁忌/副作用
+    'contraindication': '禁忌',
+    'side effect': '副作用',
+    'gastrointestinal': '胃肠道',
+    'bleeding': '出血',
+    'ulcer': '溃疡',
+    'dizziness': '头晕',
+    'drowsiness': '嗜睡',
+    'nausea': '恶心',
+    'vomiting': '呕吐',
+    'constipation': '便秘',
+    'dry mouth': '口干'
+  };
+
+  /**
+   * 中文化处理
+   */
+  private toChinese(text: string): string {
+    if (!text) return text;
+    
+    // 直接匹配
+    if (this.translationMap[text]) {
+      return this.translationMap[text];
+    }
+    
+    // 部分匹配
+    for (const [en, cn] of Object.entries(this.translationMap)) {
+      if (text.toLowerCase().includes(en.toLowerCase())) {
+        return text.replace(new RegExp(en, 'gi'), cn);
+      }
+    }
+    
+    return text;
+  }
+
+  /**
+   * 安全获取数组
+   */
+  private safeArray(arr: any[] | undefined, defaultValue: string[]): string[] {
+    if (!arr || !Array.isArray(arr) || arr.length === 0) {
+      return defaultValue;
+    }
+    return arr;
+  }
+
+  /**
+   * 安全获取字符串
+   */
+  private safeString(str: string | undefined, defaultValue: string): string {
+    if (!str || typeof str !== 'string') {
+      return defaultValue;
+    }
+    return str;
+  }
+
+  /**
+   * 格式化药品搜索结果 - 接收 DrugInfo[] 格式
+   */
+  formatDrugs(rawResults: DrugInfo[]): FormattedDrugCard[] {
+    if (!rawResults || !Array.isArray(rawResults)) {
+      console.warn('⚠️ formatDrugs 接收到的数据无效:', rawResults);
+      return [];
+    }
+    
+    console.log('📦 formatDrugs 接收到的原始数据:', rawResults);
+    
+    return rawResults.map((drug) => {
+      // 确保每个字段都有默认值
+      const drugName = drug.name || '未知药品';
+      const category = drug.category || '其他';
+      const origin = this.detectOrigin(drug);
+      
+      return {
+        name: this.toChinese(drugName),
+        category: this.toChinese(category),
+        matchScore: drug.matchScore || 70,
+        
+        // 确保 keyPoints 始终是数组
+        keyPoints: this.generateDrugKeyPoints(drug) || [],
+        
+        // 确保 details 对象存在且字段都有默认值
+        details: {
+          indications: this.safeArray(drug.indications, ['请参考药品说明书']),
+          contraindications: this.safeArray(drug.contraindications, ['请参考药品说明书']),
+          usage: this.safeString(this.toChinese(drug.usage), '请遵医嘱'),
+          sideEffects: this.safeArray(drug.sideEffects, ['请参考药品说明书']),
+          manufacturer: this.safeString(this.toChinese(drug.manufacturer), '未知'),
+          approvalNumber: drug.approvalNumber,
+          insuranceType: drug.insuranceType,
+          price: drug.price
+        },
+        
+        // 来源标记
+        source: origin,
+        sourceLabel: this.getSourceLabel(drug),
+        verified: drug.verified || false,
+        origin: origin,
+        
+        // 操作
+        actions: {
+          collect: true,
+          share: true,
+          compare: true
+        }
+      };
+    });
+  }
+
+  /**
+   * 格式化医案搜索结果
+   */
+  formatCases(rawResults: any[]): FormattedCaseCard[] {
+    if (!rawResults || !Array.isArray(rawResults)) {
+      return [];
+    }
+    
+    return rawResults.map(raw => ({
+      title: this.generateCaseTitle(raw),
+      matchScore: raw.matchScore || 70,
+      
+      keyPoints: this.generateCaseKeyPoints(raw),
+      
+      details: {
+        patientInfo: this.formatPatientInfo(raw),
+        symptoms: this.safeArray(this.parseArray(raw.symptoms), []).map(s => this.toChinese(s)),
+        diagnosis: this.safeString(this.toChinese(raw.diagnosis), '未知'),
+        treatment: this.safeString(this.toChinese(raw.treatment), '未知'),
+        efficacy: this.safeString(this.toChinese(raw.efficacy), '未知'),
+        hospital: raw.hospital,
+        doctor: raw.doctor
+      },
+      
+      source: raw.source || 'platform',
+      sourceLabel: this.getCaseSourceLabel(raw),
+      
+      actions: {
+        collect: true,
+        share: true,
+        reference: true
+      }
+    }));
+  }
+
+  /**
+   * 生成药品关键点（5条）- 接受 DrugInfo 类型
+   */
+  private generateDrugKeyPoints(drug: DrugInfo): string[] {
+    const points = [];
+    
+    // 药品名
+    if (drug.name) {
+      points.push(`💊 药品：${this.toChinese(drug.name)}`);
+    }
+    
+    // 主治
+    if (drug.indications?.length) {
+      const indications = drug.indications
+        .map(ind => this.toChinese(ind))
+        .filter(Boolean)
+        .slice(0, 2)
+        .join('、');
+      if (indications) {
+        points.push(`🎯 主治：${indications}`);
+      }
+    }
+    
+    // 禁忌
+    if (drug.contraindications?.length) {
+      const contraindications = drug.contraindications
+        .map(con => this.toChinese(con))
+        .filter(Boolean)
+        .slice(0, 2)
+        .join('、');
+      if (contraindications) {
+        points.push(`⚠️ 禁忌：${contraindications}`);
+      }
+    }
+    
+    // 用法
+    if (drug.usage) {
+      points.push(`💊 用法：${this.toChinese(this.simplifyText(drug.usage, 1))}`);
+    }
+    
+    // 厂家/医保
+    if (drug.insuranceType) {
+      points.push(`🏥 医保：${drug.insuranceType}类`);
+    } else if (drug.manufacturer) {
+      points.push(`🏭 厂家：${this.toChinese(drug.manufacturer)}`);
+    } else {
+      points.push(`📌 来源：${this.getSourceLabel(drug)}`);
+    }
+    
+    return points.filter(Boolean);
+  }
+
+  /**
+   * 生成医案关键点
+   */
+  private generateCaseKeyPoints(case_: any): string[] {
+    const points = [];
+    
+    // 1. 患者情况
+    if (case_.patientInfo) {
+      points.push(`👤 患者：${this.formatPatientInfo(case_)}`);
+    } else if (case_.patientAge || case_.patientGender) {
+      const parts = [];
+      if (case_.patientAge) parts.push(`${case_.patientAge}岁`);
+      if (case_.patientGender) parts.push(case_.patientGender);
+      if (parts.length) points.push(`👤 患者：${parts.join('·')}`);
+    }
+    
+    // 2. 诊断
+    if (case_.diagnosis) {
+      points.push(`🏷️ 诊断：${this.toChinese(case_.diagnosis)}`);
+    }
+    
+    // 3. 治疗
+    if (case_.treatment) {
+      points.push(`💊 治疗：${this.toChinese(this.simplifyText(case_.treatment, 1))}`);
+    }
+    
+    // 4. 疗效
+    if (case_.efficacy) {
+      const emoji = case_.efficacy.includes('治愈') ? '✅' : 
+                    case_.efficacy.includes('好转') ? '📈' : '❓';
+      points.push(`${emoji} 疗效：${this.toChinese(case_.efficacy)}`);
+    } else if (case_.outcome) {
+      const emoji = case_.outcome.includes('治愈') ? '✅' : 
+                    case_.outcome.includes('好转') ? '📈' : '❓';
+      points.push(`${emoji} 疗效：${this.toChinese(case_.outcome)}`);
+    }
+    
+    // 5. 医院
+    if (case_.hospital) {
+      points.push(`🏥 医院：${case_.hospital}`);
+    } else if (case_.journal) {
+      points.push(`📚 期刊：${case_.journal}`);
+    }
+    
+    return points.slice(0, 5);
+  }
+
+  /**
+   * 提取药品名称
+   */
+  private extractName(drug: any): string {
+    return drug.name || drug.brandName || drug.genericName || drug.drugName || '未知药品';
+  }
+
+  /**
+   * 提取药品分类
+   */
+  private extractCategory(drug: any): string {
+    return drug.category || drug.drugType || drug.class || '其他';
+  }
+
+  /**
+   * 检测药品来源
+   */
+  private detectOrigin(drug: any): '国产' | '进口' | '国际' {
+    if (drug.origin === '国产') return '国产';
+    if (drug.source === 'fda') return '国际';
+    if (drug.source === 'china') return '国产';
+    if (drug.source?.includes('chengdu')) return '国产';
+    if (drug.source?.includes('guangxi')) return '国产';
+    if (drug.source?.includes('shandong')) return '国产';
+    if (drug.source?.includes('jinan')) return '国产';
+    if (drug.origin === '进口') return '进口';
+    return '进口';
+  }
+
+  /**
+   * 获取来源标签
+   */
+  private getSourceLabel(drug: any): string {
+    if (drug.source === 'fda') return '🇺🇸 FDA批准';
+    if (drug.source === 'chengdu') return '🇨🇳 成都公共数据';
+    if (drug.source === 'guangxi') return '🇨🇳 广西公共数据';
+    if (drug.source === 'shandong') return '🇨🇳 山东公共数据';
+    if (drug.source === 'jinan') return '🇨🇳 济南公共数据';
+    if (drug.source === 'local') return '📚 平台收录';
+    if (drug.origin === '国产') return '🇨🇳 国产药品';
+    if (drug.sourceLabel) return drug.sourceLabel;
+    return '📖 网络资源';
+  }
+
+  /**
+   * 获取医案来源标签
+   */
+  private getCaseSourceLabel(case_: any): string {
+    if (case_.source === 'platform') return '⭐ 平台真实案例';
+    if (case_.source === 'yiigle') return '📚 中华医学期刊';
+    if (case_.source === 'pubmed') return '📖 PubMed Central';
+    return '📄 网络资源';
+  }
+
+  /**
+   * 生成医案标题
+   */
+  private generateCaseTitle(case_: any): string {
+    const age = case_.patientInfo?.age || case_.patientAge || '';
+    const gender = case_.patientInfo?.gender === 'male' ? '男' : 
+                   case_.patientInfo?.gender === 'female' ? '女' : 
+                   case_.patientGender || '';
+    const diagnosis = this.toChinese(case_.diagnosis || case_.title || '病例');
+    
+    return `${age}${gender}${diagnosis}`.trim();
+  }
+
+  /**
+   * 格式化患者信息
+   */
+  private formatPatientInfo(case_: any): string {
+    const parts = [];
+    if (case_.patientInfo?.age) parts.push(`${case_.patientInfo.age}岁`);
+    else if (case_.patientAge) parts.push(`${case_.patientAge}岁`);
+    
+    if (case_.patientInfo?.gender) {
+      parts.push(case_.patientInfo.gender === 'male' ? '男' : '女');
+    } else if (case_.patientGender) {
+      parts.push(case_.patientGender);
+    }
+    
+    if (case_.patientInfo?.baseline?.length) {
+      parts.push(`基础病：${case_.patientInfo.baseline.map((b: string) => this.toChinese(b)).join('、')}`);
+    }
+    
+    return parts.join(' · ') || '信息待完善';
+  }
+
+  /**
+   * 解析数组
+   */
+  private parseArray(arr: any): string[] {
+    if (!arr) return [];
+    if (Array.isArray(arr)) return arr;
+    if (typeof arr === 'string') return [arr];
+    return [];
+  }
+
+  /**
+   * 简化数组（取前n条）
+   */
+  private summarizeArray(arr: any[], n: number): string[] {
+    if (!arr || !Array.isArray(arr)) return [];
+    return arr.slice(0, n);
+  }
+
+  /**
+   * 简化文本（取前n句）
+   */
+  private simplifyText(text: string, n: number): string {
+    if (!text) return '';
+    if (typeof text !== 'string') return String(text);
+    const sentences = text.split(/[。；]/).filter(s => s.trim());
+    return sentences.slice(0, n).join('。') + (sentences.length > n ? '...' : '');
+  }
+}
+
+// ========== 导出单例 ==========
+const instance = new ResultFormatter();
+export const resultFormatter = instance;
+
+if (typeof window !== 'undefined') {
+  (window as any).resultFormatter = instance;
+}

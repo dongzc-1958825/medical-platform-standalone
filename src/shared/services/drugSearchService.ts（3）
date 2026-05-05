@@ -1,0 +1,346 @@
+// src/shared/services/drugSearchService.ts
+
+/**
+ * 药品搜索服务 - 核心服务
+ * 功能：搜索药品信息，阅读并提取关键数据
+ */
+
+export interface DrugInfo {
+  id: string;
+  name: string;           // 英文名
+  nameCn: string;         // 中文名
+  category: string;       // 药物类别
+  indications: string[];  // 适应症
+  contraindications: string[]; // 禁忌症
+  usage: string;          // 用法用量
+  sideEffects: string[];  // 副作用
+  manufacturer?: string;
+  source: string;
+  sourceUrl?: string;
+  matchScore?: number;
+}
+
+export interface DrugRecommendation {
+  summary: string;
+  searchUrl: string;
+  categories: {
+    name: string;
+    description: string;
+    drugs: DrugInfo[];
+  }[];
+}
+
+class DrugSearchService {
+  
+  private backendUrl = 'http://localhost:3001/api';
+
+  /**
+   * 根据症状搜索药品
+   */
+  async searchBySymptom(symptom: string): Promise<DrugInfo[]> {
+    console.log(`🔍 搜索药品: ${symptom}`);
+    
+    // 1. 优先从中华医学期刊搜索并阅读
+    const yiigleResults = await this.searchFromYiigle(symptom);
+    if (yiigleResults.length > 0) {
+      console.log(`✅ 中华医学期刊返回 ${yiigleResults.length} 种药品`);
+      return yiigleResults;
+    }
+    
+    // 2. 其他网络搜索
+    const webResults = await this.searchFromWeb(symptom);
+    if (webResults.length > 0) {
+      console.log(`✅ 网络搜索返回 ${webResults.length} 种药品`);
+      return webResults;
+    }
+    
+    // 3. 返回搜索链接
+    console.log(`⚠️ 未找到"${symptom}"的相关药品信息`);
+    return [{
+      id: 'search-link',
+      name: `在百度搜索"${symptom} 药品"`,
+      nameCn: `百度搜索`,
+      category: '搜索建议',
+      indications: [`点击查看百度搜索结果`],
+      contraindications: [],
+      usage: '',
+      sideEffects: [],
+      source: '百度搜索',
+      sourceUrl: `https://www.baidu.com/s?wd=${encodeURIComponent(symptom + ' 药品')}`,
+      matchScore: 100
+    }];
+  }
+
+  /**
+   * 从中华医学期刊搜索并阅读文章
+   */
+  private async searchFromYiigle(keyword: string): Promise<DrugInfo[]> {
+    try {
+      const response = await fetch(
+        `${this.backendUrl}/yiigle/search?q=${encodeURIComponent(keyword)}&page=1`
+      );
+      
+      if (!response.ok) return [];
+      
+      const data = await response.json();
+      
+      if (data.data && data.data.length > 0) {
+        console.log(`📖 阅读 ${data.data.length} 篇文章，提取药品信息...`);
+        
+        // 阅读每篇文章，提取药品信息
+        const allDrugs: DrugInfo[] = [];
+        
+        for (const article of data.data) {
+          const drugs = this.extractDrugsFromArticle(article, keyword);
+          allDrugs.push(...drugs);
+        }
+        
+        // 去重
+        const unique = this.deduplicate(allDrugs);
+        console.log(`📊 提取到 ${unique.length} 种药品`);
+        return unique;
+      }
+      
+      return [];
+      
+    } catch (error) {
+      console.error('中华医学期刊搜索失败:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 从文章中提取药品信息（阅读并理解）
+   */
+  private extractDrugsFromArticle(article: any, keyword: string): DrugInfo[] {
+    const drugs: DrugInfo[] = [];
+    const text = (article.title + ' ' + article.abstract).toLowerCase();
+    
+    // 定义药品模式库（基于真实药品知识）
+    const drugPatterns = this.getDrugPatterns();
+    
+    for (const pattern of drugPatterns) {
+      if (pattern.pattern.test(text)) {
+        // 提取适应症
+        const indications = this.extractIndications(text, pattern.name, pattern.en);
+        // 提取禁忌症
+        const contraindications = this.extractContraindications(text, pattern.name);
+        // 提取用法
+        const usage = this.extractUsage(text, pattern.name);
+        
+        drugs.push({
+          id: `drug-${pattern.en}-${Date.now()}`,
+          name: pattern.en,
+          nameCn: pattern.name,
+          category: pattern.category,
+          indications: indications.length > 0 ? indications : [`适用于${keyword}的治疗`],
+          contraindications: contraindications.length > 0 ? contraindications : ['请参考药品说明书'],
+          usage: usage || pattern.defaultUsage,
+          sideEffects: pattern.sideEffects || [],
+          manufacturer: article.journal,
+          source: '中华医学期刊',
+          sourceUrl: article.url,
+          matchScore: 85
+        });
+      }
+    }
+    
+    return drugs;
+  }
+
+  /**
+   * 获取药品模式库
+   */
+  private getDrugPatterns(): Array<{
+    name: string;
+    en: string;
+    category: string;
+    pattern: RegExp;
+    defaultUsage: string;
+    sideEffects?: string[];
+  }> {
+    return [
+      // 痛风药物
+      { name: '秋水仙碱', en: 'colchicine', category: '抗炎药', pattern: /秋水仙碱|colchicine/i, defaultUsage: '0.5mg/次，2-3次/天', sideEffects: ['腹泻', '恶心'] },
+      { name: '布洛芬', en: 'ibuprofen', category: '非甾体抗炎药', pattern: /布洛芬|ibuprofen/i, defaultUsage: '0.2-0.4g/次，3-4次/天', sideEffects: ['胃肠道反应', '头痛'] },
+      { name: '双氯芬酸钠', en: 'diclofenac', category: '非甾体抗炎药', pattern: /双氯芬酸钠|diclofenac/i, defaultUsage: '25-50mg/次，3次/天', sideEffects: ['胃肠道不适'] },
+      { name: '塞来昔布', en: 'celecoxib', category: '非甾体抗炎药', pattern: /塞来昔布|celecoxib/i, defaultUsage: '100-200mg/次，1-2次/天', sideEffects: ['胃肠道刺激小'] },
+      { name: '别嘌醇', en: 'allopurinol', category: '黄嘌呤氧化酶抑制剂', pattern: /别嘌醇|allopurinol/i, defaultUsage: '起始50-100mg/天，逐渐加量', sideEffects: ['皮疹', '肝功能异常'] },
+      { name: '非布司他', en: 'febuxostat', category: '黄嘌呤氧化酶抑制剂', pattern: /非布司他|febuxostat/i, defaultUsage: '起始20mg/天，最大80mg/天', sideEffects: ['肝功能异常'] },
+      { name: '苯溴马隆', en: 'benzbromarone', category: '促尿酸排泄药', pattern: /苯溴马隆|benzbromarone/i, defaultUsage: '50mg/天，可增至100mg/天', sideEffects: ['肝损伤'] },
+      
+      // 神经痛药物
+      { name: '加巴喷丁', en: 'gabapentin', category: '抗惊厥药', pattern: /加巴喷丁|gabapentin/i, defaultUsage: '起始300mg睡前，逐渐加量', sideEffects: ['嗜睡', '头晕'] },
+      { name: '普瑞巴林', en: 'pregabalin', category: '抗惊厥药', pattern: /普瑞巴林|pregabalin/i, defaultUsage: '75mg一日2次', sideEffects: ['头晕', '嗜睡'] },
+      { name: '阿米替林', en: 'amitriptyline', category: '三环类抗抑郁药', pattern: /阿米替林|amitriptyline/i, defaultUsage: '起始25mg睡前', sideEffects: ['嗜睡', '口干'] },
+      
+      // 失眠药物
+      { name: '唑吡坦', en: 'zolpidem', category: '非苯二氮䓬类', pattern: /唑吡坦|zolpidem/i, defaultUsage: '5-10mg睡前服用', sideEffects: ['嗜睡', '头晕'] },
+      { name: '右佐匹克隆', en: 'eszopiclone', category: '非苯二氮䓬类', pattern: /右佐匹克隆|eszopiclone/i, defaultUsage: '1-3mg睡前服用', sideEffects: ['口苦', '头晕'] },
+      { name: '艾司唑仑', en: 'estazolam', category: '苯二氮䓬类', pattern: /艾司唑仑|estazolam/i, defaultUsage: '1-2mg睡前服用', sideEffects: ['嗜睡', '记忆力下降'] },
+      { name: '褪黑素', en: 'melatonin', category: '褪黑素受体激动剂', pattern: /褪黑素|melatonin/i, defaultUsage: '1-3mg睡前1-2小时', sideEffects: ['头痛', '恶心'] }
+    ];
+  }
+
+  /**
+   * 从文本中提取适应症
+   */
+  private extractIndications(text: string, drugName: string, drugEn: string): string[] {
+    const sentences = text.split(/[。；]/);
+    for (const sentence of sentences) {
+      if ((sentence.includes(drugName) || sentence.includes(drugEn)) && 
+          (sentence.includes('用于') || sentence.includes('治疗') || sentence.includes('适应'))) {
+        return [sentence.trim()];
+      }
+    }
+    return [];
+  }
+
+  /**
+   * 从文本中提取禁忌症
+   */
+  private extractContraindications(text: string, drugName: string): string[] {
+    const sentences = text.split(/[。；]/);
+    for (const sentence of sentences) {
+      if (sentence.includes(drugName) && 
+          (sentence.includes('禁用') || sentence.includes('禁忌') || sentence.includes('不宜'))) {
+        return [sentence.trim()];
+      }
+    }
+    return [];
+  }
+
+  /**
+   * 从文本中提取用法
+   */
+  private extractUsage(text: string, drugName: string): string {
+    const sentences = text.split(/[。；]/);
+    for (const sentence of sentences) {
+      if (sentence.includes(drugName) && 
+          (sentence.includes('用法') || sentence.includes('剂量') || sentence.includes('mg'))) {
+        return sentence.trim();
+      }
+    }
+    return '';
+  }
+
+  /**
+   * 从网络搜索
+   */
+  private async searchFromWeb(keyword: string): Promise<DrugInfo[]> {
+    try {
+      const response = await fetch(`${this.backendUrl}/search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keyword, type: 'drug' })
+      });
+      
+      if (!response.ok) return [];
+      
+      const data = await response.json();
+      return this.parseResults(data, keyword);
+      
+    } catch (error) {
+      console.error('网络搜索失败:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 解析搜索结果
+   */
+  private parseResults(data: any, keyword: string): DrugInfo[] {
+    const results: DrugInfo[] = [];
+    
+    if (data.drugs?.source === 'yaozhi' && data.drugs.results) {
+      for (const item of data.drugs.results.slice(0, 5)) {
+        results.push({
+          id: `yaozhi-${Date.now()}`,
+          name: item.name,
+          nameCn: this.extractChineseName(item.name),
+          category: '药品',
+          indications: [item.indications || '请参考药品说明书'],
+          contraindications: ['请参考药品说明书'],
+          usage: '请遵医嘱',
+          sideEffects: [],
+          manufacturer: item.manufacturer,
+          source: '药智数据',
+          sourceUrl: item.url,
+          matchScore: 80
+        });
+      }
+    }
+    
+    return results;
+  }
+
+  /**
+   * 提取中文名
+   */
+  private extractChineseName(text: string): string {
+    const match = text.match(/[\u4e00-\u9fa5]{2,15}/);
+    return match ? match[0] : text.substring(0, 20);
+  }
+
+  /**
+   * 去重
+   */
+  private deduplicate(drugs: DrugInfo[]): DrugInfo[] {
+    const seen = new Set();
+    return drugs.filter(drug => {
+      if (seen.has(drug.name)) return false;
+      seen.add(drug.name);
+      return true;
+    });
+  }
+
+  /**
+   * AI推荐
+   */
+  async recommend(symptom: string, patientInfo?: any): Promise<DrugRecommendation> {
+    const drugs = await this.searchBySymptom(symptom);
+    const searchUrl = `https://www.baidu.com/s?wd=${encodeURIComponent(symptom + ' 治疗 药品')}`;
+    
+    // 按类别分组
+    const groups = new Map<string, DrugInfo[]>();
+    for (const drug of drugs) {
+      const cat = drug.category;
+      if (!groups.has(cat)) groups.set(cat, []);
+      groups.get(cat)!.push(drug);
+    }
+    
+    const categories = Array.from(groups.entries()).map(([name, drugs]) => ({
+      name,
+      description: this.getCategoryDescription(name),
+      drugs
+    }));
+    
+    return {
+      summary: `关于"${symptom}"的治疗药物：`,
+      searchUrl,
+      categories
+    };
+  }
+
+  private getCategoryDescription(category: string): string {
+    const desc: Record<string, string> = {
+      '抗炎药': '急性期首选，快速控制炎症',
+      '非甾体抗炎药': '缓解疼痛和炎症',
+      '黄嘌呤氧化酶抑制剂': '抑制尿酸生成，长期降尿酸',
+      '促尿酸排泄药': '促进尿酸排泄',
+      '抗惊厥药': '神经病理性疼痛的一线用药',
+      '三环类抗抑郁药': '改善神经痛和睡眠',
+      '非苯二氮䓬类': '快速入睡，依赖性低',
+      '苯二氮䓬类': '抗焦虑助眠，易成瘾',
+      '褪黑素受体激动剂': '调节生物节律，副作用小'
+    };
+    return desc[category] || '相关药物';
+  }
+}
+
+export const drugSearchService = new DrugSearchService();
+
+// 挂载到window方便测试
+if (typeof window !== 'undefined') {
+  (window as any).drugSearchService = drugSearchService;
+}

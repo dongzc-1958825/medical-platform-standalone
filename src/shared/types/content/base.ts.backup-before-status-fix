@@ -1,0 +1,46 @@
+// src/shared/types/content/base.ts - 公开内容基类
+import { Identifiable, Timestamped, DataVisibility } from '../base';
+
+/**
+ * 公开内容基类 - 用于四大公开功能
+ * 医案分享、寻医问药、专病社区、消息功能
+ */
+export interface PublicContent extends Identifiable, Timestamped {
+  // 基础信息
+  title: string;
+  content: string;
+  summary?: string;
+  
+  // 作者信息（文责自负）
+  authorId: string;
+  authorName: string;
+  authorRole: string;
+  authorCredentials?: string;
+  institution?: string;
+  
+  // 分类标签
+  tags: string[];
+  keywords: string[];
+  
+  // 时间信息
+  publishedAt?: string;
+  updatedAt?: string;
+  
+  // 互动数据
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  shareCount: number;
+  
+  // 状态管理
+  status: 'active' | 'archived' | 'deleted';
+  isVerified?: boolean;
+  isFeatured?: boolean;
+  
+  // 可见性（默认公开）
+  visibility: DataVisibility.PUBLIC | DataVisibility.PROTECTED;
+  
+  // 来源信息（用于微信互通）
+  sourceType?: 'original' | 'wechat' | 'import';
+  originalSourceContent?: string;
+}

@@ -1,0 +1,94 @@
+// src/shared/services/drugSearchService.ts
+
+/**
+ * 药品搜索服务 - 极简版
+ * 只保留AI药品问答功能
+ */
+
+export interface DrugInfo {
+  id: string;
+  name: string;
+  nameCn: string;
+  category: string;
+  indications: string[];
+  contraindications: string[];
+  usage: string;
+  sideEffects: string[];
+  manufacturer?: string;
+  source: string;
+  sourceUrl?: string;
+  matchScore?: number;
+}
+
+export interface DrugRecommendation {
+  summary: string;
+  categories: {
+    name: string;
+    description: string;
+    drugs: DrugInfo[];
+  }[];
+}
+
+class DrugSearchService {
+  
+  /**
+   * 根据症状搜索药品 - 已移除，直接返回空
+   */
+  async searchBySymptom(symptom: string): Promise<DrugInfo[]> {
+    console.log(`⚠️ 药品搜索功能已移除，请使用AI药品问答`);
+    return [];
+  }
+
+  /**
+   * 根据药品名搜索 - 已移除
+   */
+  async searchByName(drugName: string): Promise<DrugInfo | null> {
+    return null;
+  }
+
+  /**
+   * AI推荐 - 已移除
+   */
+  async recommend(symptom: string, patientInfo?: any): Promise<DrugRecommendation> {
+    return {
+      summary: `关于"${symptom}"的用药指导，请使用AI用药指导功能。`,
+      categories: []
+    };
+  }
+
+  /**
+   * AI药品问答 - 保留
+   */
+  async askDrugQuestion(question: string): Promise<{
+    answer: string;
+    relatedDrugs?: DrugInfo[];
+  }> {
+    console.log(`🤖 AI药品问答: ${question}`);
+    
+    try {
+      // 调用AI服务
+      const result = await aiMedicalService.getDrugAdvice(question);
+      
+      return {
+        answer: result.summary,
+        relatedDrugs: []
+      };
+    } catch (error) {
+      console.error('AI药品问答失败:', error);
+      return {
+        answer: `关于"${question}"的问题，建议咨询医生或药师。`,
+        relatedDrugs: []
+      };
+    }
+  }
+}
+
+// 导入 aiMedicalService
+import { aiMedicalService } from './aiMedicalService';
+
+export const drugSearchService = new DrugSearchService();
+
+// 挂载到window方便测试
+if (typeof window !== 'undefined') {
+  (window as any).drugSearchService = drugSearchService;
+}

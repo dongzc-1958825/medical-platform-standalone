@@ -1,0 +1,457 @@
+﻿/**
+ * 统一医疗数据仓库接口
+ * 为五大功能提供统一的数据操作接口
+ * 设计原则：统一数据管理、长期存储、微信互通友好
+ */
+
+import {
+  MedicalPost,
+  MessageCategory,
+  DataStatus,
+  StorageTier,
+  AuthorRole,
+  QueryOptions,
+  MedicalDataStats,
+  ValueMetrics,
+  WeChatImportOptions,
+  CreatePostData,
+  UpdatePostData
+} from '../shared/types/message';
+
+// ==================== 基础接口 ====================
+
+/**
+ * 数据操作结果
+ */
+export interface DataOperationResult<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+/**
+ * 批量操作结果
+ */
+export interface BatchOperationResult {
+  success: boolean;
+  processedCount: number;
+  successCount: number;
+  failedCount: number;
+  errors: Array<{ id: string; error: string }>;
+}
+
+/**
+ * 搜索条件
+ */
+export interface SearchConditions {
+  keywords?: string;
+  category?: MessageCategory;
+  authorId?: string;
+  tags?: string[];
+  dateRange?: { start?: string; end?: string };
+  minValueScore?: number;
+  entityType?: string | string[];
+}
+
+/**
+ * 数据迁移报告
+ */
+export interface DataMigrationReport {
+  timestamp: string;
+  sourceTier: StorageTier;
+  targetTier: StorageTier;
+  migratedCount: number;
+  skippedCount: number;
+  failedCount: number;
+  totalSizeBefore: number;
+  totalSizeAfter: number;
+  estimatedSpaceSaved: number;
+}
+
+/**
+ * 数据清理报告
+ */
+export interface DataCleanupReport {
+  timestamp: string;
+  removedInvalidCount: number;
+  archivedInactiveCount: number;
+  compressedCount: number;
+  totalSpaceFreed: number;
+  details: {
+    removedPosts: string[];
+    archivedPosts: string[];
+    compressedPosts: string[];
+  };
+}
+
+// ==================== 主仓库接口 ====================
+
+/**
+ * 统一医疗数据仓库接口
+ * 注意：此接口为五大功能提供统一数据操作，不依赖具体存储实现
+ */
+export interface IMedicalDataRepository {
+  // ============ 初始化与信息 ============
+  
+  /**
+   * 初始化仓库
+   */
+  initialize(): Promise<void>;
+  
+  /**
+   * 获取仓库信息
+   */
+  getInfo(): Promise<{
+    storageType: string;
+    totalCapacity: number;
+    usedCapacity: number;
+    postCount: number;
+    lastBackupTime?: string;
+    isReady: boolean;
+  }>;
+  
+  // ============ 基础CRUD操作 ============
+  
+  /**
+   * 创建新帖子
+   */
+  createPost(data: CreatePostData): Promise<DataOperationResult<MedicalPost>>;
+  
+  /**
+   * 获取单个帖子
+   */
+  getPost(id: string): Promise<DataOperationResult<MedicalPost>>;
+  
+  /**
+   * 更新帖子
+   */
+  updatePost(id: string, updates: UpdatePostData, reason?: string): Promise<DataOperationResult<MedicalPost>>;
+  
+  /**
+   * 删除帖子（软删除）
+   */
+  deletePost(id: string, reason?: string, hardDelete?: boolean): Promise<DataOperationResult>;
+  
+  /**
+   * 撤回帖子
+   */
+  withdrawPost(id: string, reason: string): Promise<DataOperationResult>;
+  
+  /**
+   * 恢复已删除/撤回的帖子
+   */
+  restorePost(id: string): Promise<DataOperationResult<MedicalPost>>;
+  
+  // ============ 批量查询操作 ============
+  
+  /**
+   * 查询帖子列表
+   */
+  findPosts(options?: QueryOptions): Promise<DataOperationResult<MedicalPost[]>>;
+  
+  /**
+   * 按分类查询
+   */
+  findPostsByCategory(category: MessageCategory, options?: QueryOptions): Promise<DataOperationResult<MedicalPost[]>>;
+  
+  /**
+   * 按作者查询
+   */
+  findPostsByAuthor(authorId: string, options?: QueryOptions): Promise<DataOperationResult<MedicalPost[]>>;
+  
+  /**
+   * 按实体类型查询
+   */
+  findPostsByEntityType(entityType: string, options?: QueryOptions): Promise<DataOperationResult<MedicalPost[]>>;
+  
+  // ============ 搜索功能 ============
+  
+  /**
+   * 关键词搜索
+   */
+  searchPosts(conditions: SearchConditions, options?: QueryOptions): Promise<DataOperationResult<MedicalPost[]>>;
+  
+  /**
+   * 标签搜索
+   */
+  searchPostsByTags(tags: string[], options?: QueryOptions): Promise<DataOperationResult<MedicalPost[]>>;
+  
+  /**
+   * 全文搜索（如果支持）
+   */
+  fullTextSearch(query: string, options?: QueryOptions): Promise<DataOperationResult<MedicalPost[]>>;
+  
+  // ============ 统计和分析 ============
+  
+  /**
+   * 获取数据统计
+   */
+  getStatistics(): Promise<DataOperationResult<MedicalDataStats>>;
+  
+  /**
+   * 获取分类统计
+   */
+  getCategoryStatistics(category?: MessageCategory): Promise<DataOperationResult<Omit<MedicalDataStats, 'byCategory'>>>;
+  
+  /**
+   * 获取作者统计
+   */
+  getAuthorStatistics(authorId?: string): Promise<DataOperationResult<{
+    postCount: number;
+    totalViews: number;
+    totalLikes: number;
+    averageValueScore: number;
+  }>>;
+  
+  /**
+   * 评估帖子价值
+   */
+  evaluatePostValue(id: string): Promise<DataOperationResult<ValueMetrics>>;
+  
+  // ============ 批量操作 ============
+  
+  /**
+   * 批量更新
+   */
+  batchUpdate(ids: string[], updates: UpdatePostData): Promise<BatchOperationResult>;
+  
+  /**
+   * 批量删除
+   */
+  batchDelete(ids: string[], reason?: string): Promise<BatchOperationResult>;
+  
+  /**
+   * 批量归档
+   */
+  batchArchive(ids: string[]): Promise<BatchOperationResult>;
+  
+  // ============ 数据管理 ============
+  
+  /**
+   * 归档帖子（移动到归档存储）
+   */
+  archivePost(id: string): Promise<DataOperationResult>;
+  
+  /**
+   * 迁移存储层级
+   */
+  migrateStorageTier(id: string, targetTier: StorageTier): Promise<DataOperationResult>;
+  
+  /**
+   * 自动迁移（根据策略）
+   */
+  autoMigrateByPolicy(): Promise<DataOperationResult<DataMigrationReport>>;
+  
+  /**
+   * 清理无效数据
+   */
+  cleanupInvalidData(): Promise<DataOperationResult<DataCleanupReport>>;
+  
+  /**
+   * 压缩数据
+   */
+  compressData(): Promise<DataOperationResult<{ compressedCount: number; spaceSaved: number }>>;
+  
+  // ============ 导入/导出 ============
+  
+  /**
+   * 导出数据
+   */
+  exportData(options?: {
+    format?: 'json' | 'csv';
+    includeArchived?: boolean;
+    dateRange?: { start: string; end: string };
+    entityTypes?: string[];
+  }): Promise<DataOperationResult<string>>;
+  
+  /**
+   * 导入数据
+   */
+  importData(data: string, options?: {
+    clearExisting?: boolean;
+    mergeStrategy?: 'skip' | 'overwrite' | 'merge';
+  }): Promise<BatchOperationResult>;
+  
+  /**
+   * 备份数据
+   */
+  backupData(): Promise<DataOperationResult<{ backupId: string; size: number; timestamp: string }>>;
+  
+  /**
+   * 恢复备份
+   */
+  restoreBackup(backupId: string): Promise<DataOperationResult>;
+  
+  // ============ 微信互通功能 ============
+  
+  /**
+   * 从微信内容创建帖子
+   */
+  createFromWeChat(
+    wechatContent: string,
+    authorInfo: { id: string; name: string; role: AuthorRole },
+    options?: WeChatImportOptions & { category?: MessageCategory }
+  ): Promise<DataOperationResult<MedicalPost>>;
+  
+  /**
+   * 生成微信分享内容
+   */
+  generateWeChatShareContent(id: string, template?: {
+    titleTemplate?: string;
+    footerTemplate?: string;
+    maxLength?: number;
+  }): Promise<DataOperationResult<string>>;
+  
+  /**
+   * 记录微信分享
+   */
+  recordWeChatShare(id: string): Promise<DataOperationResult>;
+  
+  /**
+   * 获取微信分享统计
+   */
+  getWeChatShareStats(): Promise<DataOperationResult<{
+    totalShares: number;
+    sharesByCategory: Record<MessageCategory, number>;
+    sharesByMonth: Record<string, number>;
+    mostSharedPosts: Array<{ postId: string; title: string; shareCount: number }>;
+  }>>;
+  
+  // ============ 订阅和事件 ============
+  
+  /**
+   * 订阅数据变化
+   */
+  subscribeToChanges(callback: (event: {
+    type: 'created' | 'updated' | 'deleted' | 'archived';
+    post: MedicalPost;
+    timestamp: string;
+  }) => void): () => void;
+  
+  /**
+   * 订阅统计更新
+   */
+  subscribeToStatistics(callback: (stats: MedicalDataStats) => void): () => void;
+  
+  /**
+   * 触发数据刷新
+   */
+  refreshData(): Promise<void>;
+}
+
+// ==================== 工厂接口 ====================
+
+/**
+ * 仓库工厂接口 - 用于创建不同实现的仓库
+ */
+export interface IMedicalDataRepositoryFactory {
+  /**
+   * 创建仓库实例
+   * @param storageType 存储类型
+   * @param options 配置选项
+   */
+  createRepository(
+    storageType?: 'local' | 'indexeddb' | 'memory' | 'api',
+    options?: {
+      databaseName?: string;
+      apiBaseUrl?: string;
+      encryptionKey?: string;
+      autoBackup?: boolean;
+      backupInterval?: number;
+    }
+  ): Promise<IMedicalDataRepository>;
+  
+  /**
+   * 获取支持的存储类型
+   */
+  getSupportedStorageTypes(): Array<{
+    type: string;
+    displayName: string;
+    description: string;
+    maxCapacity: number;
+    features: string[];
+  }>;
+  
+  /**
+   * 迁移数据
+   */
+  migrateData(
+    fromType: string,
+    toType: string,
+    options?: {
+      preserveData: boolean;
+      backupBeforeMigrate: boolean;
+      progressCallback?: (progress: number, message: string) => void;
+    }
+  ): Promise<{
+    success: boolean;
+    migratedCount: number;
+    totalTime: number;
+    errors: string[];
+  }>;
+  
+  /**
+   * 获取当前存储配置
+   */
+  getCurrentConfig(): {
+    storageType: string;
+    databaseName?: string;
+    apiBaseUrl?: string;
+    autoBackup: boolean;
+    lastBackupTime?: string;
+  };
+}
+
+// ==================== 具体仓库实现占位符 ====================
+
+/**
+ * LocalStorage实现配置
+ */
+export interface LocalStorageConfig {
+  storageKeyPrefix: string;
+  maxSize: number; // 最大存储大小（字节）
+  autoCleanup: boolean;
+  cleanupThreshold: number; // 清理阈值（百分比）
+  compression: boolean;
+}
+
+/**
+ * IndexedDB实现配置
+ */
+export interface IndexedDBConfig {
+  databaseName: string;
+  databaseVersion: number;
+  objectStoreName: string;
+  keyPath: string;
+  indexes: Array<{
+    name: string;
+    keyPath: string | string[];
+    options?: IDBIndexParameters;
+  }>;
+  autoIncrement: boolean;
+}
+
+/**
+ * API实现配置
+ */
+export interface ApiRepositoryConfig {
+  baseUrl: string;
+  endpoints: {
+    posts: string;
+    search: string;
+    statistics: string;
+    import: string;
+    export: string;
+    backup: string;
+  };
+  authentication: {
+    type: 'bearer' | 'basic' | 'cookie';
+    token?: string;
+  };
+  timeout: number;
+  retryCount: number;
+}
+
+
+

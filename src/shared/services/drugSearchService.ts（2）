@@ -1,0 +1,376 @@
+// src/shared/services/drugSearchService.ts
+
+/**
+ * 药品搜索服务 - 独立功能
+ * 输入：症状/药品名
+ * 输出：药品信息（名称、适应症、禁忌症、用法）
+ */
+
+import { aiMedicalService, AIMedicalAnswer } from './aiMedicalService';
+
+export interface DrugInfo {
+  id: string;
+  name: string;           // 英文名
+  nameCn: string;         // 中文名
+  category: string;       // 药物类别
+  indications: string[];  // 适应症
+  contraindications: string[]; // 禁忌症
+  usage: string;          // 用法用量
+  sideEffects: string[];  // 副作用
+  manufacturer?: string;
+  source: string;
+  sourceUrl?: string;
+  matchScore?: number;
+}
+
+export interface DrugRecommendation {
+  summary: string;
+  categories: {
+    name: string;
+    description: string;
+    drugs: DrugInfo[];
+  }[];
+}
+
+class DrugSearchService {
+  
+  private backendUrl = 'http://localhost:3001/api';
+  
+  // 中英药品名映射
+  private drugNameMap: Map<string, string> = new Map([
+    ['Gabapentin', '加巴喷丁'],
+    ['Pregabalin', '普瑞巴林'],
+    ['Amitriptyline', '阿米替林'],
+    ['Ibuprofen', '布洛芬'],
+    ['Allopurinol', '别嘌醇'],
+    ['Febuxostat', '非布司他'],
+    ['Colchicine', '秋水仙碱']
+  ]);
+
+  /**
+   * 根据症状搜索药品
+   */
+  async searchBySymptom(symptom: string): Promise<DrugInfo[]> {
+    console.log(`🔍 药品搜索: ${symptom}`);
+    
+    // 1. 尝试从网络搜索
+    const webResults = await this.searchFromWeb(symptom);
+    if (webResults.length > 0) {
+      return webResults;
+    }
+    
+    // 2. 网络失败，使用本地知识库
+    return this.getLocalKnowledge(symptom);
+  }
+
+  /**
+   * 根据药品名搜索
+   */
+  async searchByName(drugName: string): Promise<DrugInfo | null> {
+    const drugs = await this.searchFromWeb(drugName);
+    return drugs.find(d => d.name.toLowerCase() === drugName.toLowerCase()) || null;
+  }
+
+  /**
+   * AI推荐：根据症状和患者信息推荐药品
+   */
+  async recommend(symptom: string, patientInfo?: any): Promise<DrugRecommendation> {
+    const drugs = await this.searchBySymptom(symptom);
+    
+    // 根据患者信息过滤
+    const filteredDrugs = this.filterByPatient(drugs, patientInfo);
+    
+    // 按阶段分类
+    const categories = this.classifyByStage(filteredDrugs, symptom);
+    
+    return {
+      summary: this.generateSummary(symptom, categories),
+      categories
+    };
+  }
+
+  /**
+   * AI增强的药品信息查询
+   * 用于：回答药品相关问题、合理用药咨询
+   */
+  async askDrugQuestion(question: string): Promise<{
+    answer: string;
+    relatedDrugs?: DrugInfo[];
+  }> {
+    console.log(`🤖 AI药品问答: ${question}`);
+    
+    try {
+      // 调用 AI 服务
+      const result = await aiMedicalService.getDrugAdvice(question);
+      
+      // 同时搜索相关药品
+      const relatedDrugs = await this.searchFromWeb(question);
+      
+      return {
+        answer: result.summary,
+        relatedDrugs: relatedDrugs.slice(0, 3)
+      };
+    } catch (error) {
+      console.error('AI药品问答失败:', error);
+      return {
+        answer: `关于"${question}"的问题，建议咨询医生或药师。`,
+        relatedDrugs: []
+      };
+    }
+  }
+
+  /**
+   * 从网络搜索
+   */
+  private async searchFromWeb(keyword: string): Promise<DrugInfo[]> {
+    try {
+      const response = await fetch(`${this.backendUrl}/search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keyword, type: 'drug' })
+      });
+      
+      if (!response.ok) return [];
+      
+      const data = await response.json();
+      return this.parseDrugResults(data);
+      
+    } catch (error) {
+      console.error('网络搜索失败:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 解析药品搜索结果
+   */
+  private parseDrugResults(data: any): DrugInfo[] {
+    const drugs: DrugInfo[] = [];
+    
+    if (data.drugs?.results) {
+      for (const item of data.drugs.results) {
+        const name = item.name || '';
+        const nameCn = this.drugNameMap.get(name) || this.extractChineseName(name);
+        
+        drugs.push({
+          id: `${name}-${Date.now()}`,
+          name: name,
+          nameCn: nameCn,
+          category: this.inferCategory(name, item),
+          indications: item.indications ? [item.indications] : ['请参考药品说明书'],
+          contraindications: ['请参考药品说明书'],
+          usage: '请遵医嘱',
+          sideEffects: [],
+          manufacturer: item.manufacturer,
+          source: item.source || '网络',
+          sourceUrl: item.url,
+          matchScore: 80
+        });
+      }
+    }
+    
+    return drugs;
+  }
+
+  /**
+   * 根据患者信息过滤
+   */
+  private filterByPatient(drugs: DrugInfo[], patientInfo?: any): DrugInfo[] {
+    if (!patientInfo) return drugs;
+    
+    return drugs.filter(drug => {
+      // 过敏史检查
+      if (patientInfo.allergies) {
+        const hasAllergy = patientInfo.allergies.some((a: string) => 
+          drug.contraindications.some(c => c.includes(a))
+        );
+        if (hasAllergy) return false;
+      }
+      return true;
+    });
+  }
+
+  /**
+   * 按阶段分类
+   */
+  private classifyByStage(drugs: DrugInfo[], symptom: string): { name: string; description: string; drugs: DrugInfo[] }[] {
+    const categories: { name: string; description: string; drugs: DrugInfo[] }[] = [];
+    
+    const acuteDrugs: DrugInfo[] = [];
+    const chronicDrugs: DrugInfo[] = [];
+    const otherDrugs: DrugInfo[] = [];
+    
+    const acuteNames = ['秋水仙碱', '布洛芬', '萘普生', '双氯芬酸钠', '塞来昔布'];
+    const chronicNames = ['别嘌醇', '非布司他', '丙磺舒', '苯溴马隆'];
+    
+    for (const drug of drugs) {
+      if (acuteNames.includes(drug.nameCn)) {
+        acuteDrugs.push(drug);
+      } else if (chronicNames.includes(drug.nameCn)) {
+        chronicDrugs.push(drug);
+      } else {
+        otherDrugs.push(drug);
+      }
+    }
+    
+    if (acuteDrugs.length > 0) {
+      categories.push({
+        name: '🔥 急性期用药',
+        description: '用于控制炎症、快速缓解症状',
+        drugs: acuteDrugs
+      });
+    }
+    
+    if (chronicDrugs.length > 0) {
+      categories.push({
+        name: '💊 长期控制用药',
+        description: '用于长期控制病情、预防复发',
+        drugs: chronicDrugs
+      });
+    }
+    
+    if (otherDrugs.length > 0) {
+      categories.push({
+        name: '📚 其他相关药物',
+        description: '请在医生指导下使用',
+        drugs: otherDrugs
+      });
+    }
+    
+    return categories;
+  }
+
+  /**
+   * 生成摘要
+   */
+  private generateSummary(symptom: string, categories: any[]): string {
+    const drugCount = categories.reduce((sum, c) => sum + c.drugs.length, 0);
+    
+    if (drugCount === 0) {
+      return `关于"${symptom}"的药品信息较少，建议咨询医生。`;
+    }
+    
+    const drugNames = categories.flatMap(c => c.drugs.map(d => d.nameCn));
+    return `${symptom}的常用药物包括：${drugNames.join('、')}。请在医生指导下使用。`;
+  }
+
+  /**
+   * 推断药物类别
+   */
+  private inferCategory(name: string, item: any): string {
+    const lowerName = name.toLowerCase();
+    const text = JSON.stringify(item).toLowerCase();
+    
+    if (lowerName.includes('colchicine') || text.includes('秋水仙碱')) return '抗炎药';
+    if (lowerName.includes('ibuprofen') || text.includes('布洛芬')) return '非甾体抗炎药';
+    if (lowerName.includes('allopurinol') || text.includes('别嘌醇')) return '黄嘌呤氧化酶抑制剂';
+    if (lowerName.includes('febuxostat') || text.includes('非布司他')) return '黄嘌呤氧化酶抑制剂';
+    if (lowerName.includes('methylphenidate') || text.includes('哌甲酯')) return '中枢兴奋剂';
+    if (lowerName.includes('atomoxetine') || text.includes('托莫西汀')) return '选择性去甲肾上腺素再摄取抑制剂';
+    
+    return '其他';
+  }
+
+  /**
+   * 提取中文名
+   */
+  private extractChineseName(name: string): string {
+    return this.drugNameMap.get(name) || name;
+  }
+
+  /**
+   * 本地知识库
+   */
+  private getLocalKnowledge(symptom: string): DrugInfo[] {
+    const knowledge: Record<string, DrugInfo[]> = {
+      '痛风': [
+        {
+          id: 'colchicine',
+          name: 'Colchicine',
+          nameCn: '秋水仙碱',
+          category: '抗炎药',
+          indications: ['急性痛风发作', '预防痛风发作'],
+          contraindications: ['严重肾功能不全', '孕妇及哺乳期妇女'],
+          usage: '0.5mg/次，2-3次/天',
+          sideEffects: ['腹泻', '恶心', '呕吐'],
+          source: '本地知识库',
+          matchScore: 95
+        },
+        {
+          id: 'ibuprofen',
+          name: 'Ibuprofen',
+          nameCn: '布洛芬',
+          category: '非甾体抗炎药',
+          indications: ['急性痛风发作', '关节肿痛'],
+          contraindications: ['消化道溃疡', '严重肝肾功能不全'],
+          usage: '0.2-0.4g/次，3-4次/天',
+          sideEffects: ['胃肠道反应', '头痛'],
+          source: '本地知识库',
+          matchScore: 90
+        },
+        {
+          id: 'allopurinol',
+          name: 'Allopurinol',
+          nameCn: '别嘌醇',
+          category: '黄嘌呤氧化酶抑制剂',
+          indications: ['高尿酸血症', '慢性痛风'],
+          contraindications: ['HLA-B*5801阳性', '严重肝肾功能不全'],
+          usage: '起始50-100mg/天，逐渐加量',
+          sideEffects: ['皮疹', '肝功能异常'],
+          source: '本地知识库',
+          matchScore: 85
+        },
+        {
+          id: 'febuxostat',
+          name: 'Febuxostat',
+          nameCn: '非布司他',
+          category: '黄嘌呤氧化酶抑制剂',
+          indications: ['高尿酸血症', '别嘌醇不耐受'],
+          contraindications: ['有心血管疾病史', '孕妇'],
+          usage: '起始20mg/天，最大80mg/天',
+          sideEffects: ['肝功能异常'],
+          source: '本地知识库',
+          matchScore: 80
+        }
+      ],
+      '多动症': [
+        {
+          id: 'methylphenidate',
+          name: 'Methylphenidate',
+          nameCn: '哌甲酯',
+          category: '中枢兴奋剂',
+          indications: ['注意缺陷多动障碍', '发作性睡病'],
+          contraindications: ['青光眼', '焦虑症', '癫痫'],
+          usage: '起始5mg/次，1-2次/天',
+          sideEffects: ['食欲减退', '失眠', '头痛'],
+          source: '本地知识库',
+          matchScore: 95
+        },
+        {
+          id: 'atomoxetine',
+          name: 'Atomoxetine',
+          nameCn: '托莫西汀',
+          category: '选择性去甲肾上腺素再摄取抑制剂',
+          indications: ['注意缺陷多动障碍'],
+          contraindications: ['闭角型青光眼', '严重心血管疾病'],
+          usage: '起始0.5mg/kg/天，逐渐加量',
+          sideEffects: ['恶心', '食欲减退', '疲劳'],
+          source: '本地知识库',
+          matchScore: 90
+        }
+      ]
+    };
+    
+    if (knowledge[symptom]) return knowledge[symptom];
+    
+    for (const [key, drugs] of Object.entries(knowledge)) {
+      if (symptom.includes(key) || key.includes(symptom)) {
+        return drugs;
+      }
+    }
+    
+    return [];
+  }
+}
+
+export const drugSearchService = new DrugSearchService();

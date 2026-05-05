@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SearchResultCard 测试</title>
+    <meta charset="utf-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #f3f4f6; padding: 20px; }
+        .test-container { max-width: 600px; margin: 0 auto; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1 class="text-2xl font-bold mb-4">🔍 测试SearchResultCard组件</h1>
+        
+        <!-- 测试用例1：完整医案 -->
+        <div class="mb-4 p-2 bg-blue-50 rounded">测试用例1：完整医案（冠心病）</div>
+        <div id="card1" class="mb-6"></div>
+        
+        <!-- 测试用例2：简短医案（我们测试成功的那个） -->
+        <div class="mb-4 p-2 bg-green-50 rounded">测试用例2：简短医案（感冒）</div>
+        <div id="card2" class="mb-6"></div>
+        
+        <!-- 测试用例3：药品说明书 -->
+        <div class="mb-4 p-2 bg-purple-50 rounded">测试用例3：药品说明书</div>
+        <div id="card3" class="mb-6"></div>
+    </div>
+
+    <script>
+        // 模拟提取器（简化版，但足够测试）
+        class TestExtractor {
+            extract(text) {
+                return {
+                    patientInfo: this.extractPatient(text),
+                    symptoms: this.extractSymptoms(text),
+                    diagnosis: this.extractDiagnosis(text),
+                    treatment: this.extractTreatment(text),
+                    efficacy: this.extractEfficacy(text),
+                    medications: this.extractMedications(text),
+                    confidence: 85
+                };
+            }
+            
+            generateSummary(text) {
+                return text.substring(0, 50) + '...';
+            }
+            
+            extractPatient(text) {
+                const age = text.match(/(\d+)[岁]/)?.[1];
+                const gender = text.includes('男') ? '男' : text.includes('女') ? '女' : null;
+                if (age || gender) {
+                    return { age, gender, confidence: age && gender ? 'high' : 'medium' };
+                }
+                return null;
+            }
+            
+            extractSymptoms(text) {
+                const symptoms = [];
+                if (text.includes('头痛')) symptoms.push('头痛');
+                if (text.includes('发热')) symptoms.push('发热');
+                if (text.includes('胸痛')) symptoms.push('胸痛');
+                if (text.includes('咳嗽')) symptoms.push('咳嗽');
+                return symptoms;
+            }
+            
+            extractDiagnosis(text) {
+                const match = text.match(/诊断[：:]\s*([^。；，\n]+)/) || 
+                             text.match(/诊断为\s*([^。；，\n]+)/);
+                return match ? match[1] : null;
+            }
+            
+            extractTreatment(text) {
+                const match = text.match(/治疗[：:]\s*([^。；，\n]+)/) ||
+                             text.match(/给予\s*([^。；，\n]+)/);
+                return match ? match[1] : null;
+            }
+            
+            extractEfficacy(text) {
+                if (text.includes('缓解') || text.includes('好转')) {
+                    return { result: 'positive', description: '有效', confidence: 'high' };
+                }
+                return null;
+            }
+            
+            extractMedications(text) {
+                const drugs = [];
+                if (text.includes('阿司匹林')) drugs.push({ name: '阿司匹林', category: '抗血小板' });
+                if (text.includes('布洛芬')) drugs.push({ name: '布洛芬', category: 'NSAIDs' });
+                if (text.includes('氯吡格雷')) drugs.push({ name: '氯吡格雷', category: '抗血小板' });
+                return drugs;
+            }
+        }
+        
+        const extractor = new TestExtractor();
+
+        // 渲染卡片函数
+        function renderCard(containerId, testCase) {
+            const extracted = extractor.extract(testCase.content);
+            const summary = extractor.generateSummary(testCase.content);
+            
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-lg shadow-md p-4 mb-4 hover:shadow-lg transition-shadow';
+            
+            card.innerHTML = `
+                <!-- 头部 -->
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center space-x-2">
+                        <span class="px-2 py-1 rounded text-xs font-medium ${testCase.source === 'yiigle' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}">
+                            ${testCase.source === 'yiigle' ? '📚 中华医学期刊' : '🏥 平台医案'}
+                        </span>
+                        ${extracted.confidence > 70 ? `
+                            <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">
+                                ⭐ 高可信度 ${extracted.confidence}%
+                            </span>
+                        ` : ''}
+                    </div>
+                    <span class="text-xs text-gray-400">${testCase.date || '2024-01-15'}</span>
+                </div>
+                
+                <!-- 标题 -->
+                <h3 class="font-bold text-lg mb-2 text-gray-800">${testCase.title}</h3>
+                
+                <!-- 关键信息卡片 -->
+                <div class="bg-gray-50 rounded-lg p-3 mb-3">
+                    ${extracted.patientInfo ? `
+                        <div class="mb-2 pb-2 border-b border-gray-200">
+                            <span class="text-xs text-gray-500 block mb-1">👤 患者</span>
+                            <div class="flex items-center">
+                                ${extracted.patientInfo.age ? `
+                                    <span class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded mr-2">
+                                        ${extracted.patientInfo.age}岁
+                                    </span>
+                                ` : ''}
+                                ${extracted.patientInfo.gender ? `
+                                    <span class="text-sm bg-pink-100 text-pink-800 px-2 py-1 rounded">
+                                        ${extracted.patientInfo.gender}性
+                                    </span>
+                                ` : ''}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${extracted.symptoms.length > 0 ? `
+                        <div class="mb-2 pb-2 border-b border-gray-200">
+                            <span class="text-xs text-gray-500 block mb-1">🤒 症状</span>
+                            <div class="flex flex-wrap gap-1">
+                                ${extracted.symptoms.map(s => `
+                                    <span class="px-2 py-1 bg-red-50 text-red-700 text-xs rounded-full">${s}</span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="grid grid-cols-2 gap-2 mb-2 pb-2 border-b border-gray-200">
+                        ${extracted.diagnosis ? `
+                            <div>
+                                <span class="text-xs text-gray-500 block mb-1">🏷️ 诊断</span>
+                                <span class="text-sm font-medium text-purple-700 bg-purple-50 px-2 py-1 rounded inline-block">
+                                    ${extracted.diagnosis}
+                                </span>
+                            </div>
+                        ` : ''}
+                        
+                        ${extracted.treatment ? `
+                            <div>
+                                <span class="text-xs text-gray-500 block mb-1">💊 治疗</span>
+                                <span class="text-sm text-blue-700 bg-blue-50 px-2 py-1 rounded inline-block">
+                                    ${extracted.treatment}
+                                </span>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        ${extracted.medications.length > 0 ? `
+                            <div>
+                                <span class="text-xs text-gray-500 block mb-1">💊 药品</span>
+                                <div class="flex flex-wrap gap-1">
+                                    ${extracted.medications.map(m => `
+                                        <span class="px-2 py-1 bg-green-50 text-green-700 text-xs rounded">${m.name}</span>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        ${extracted.efficacy ? `
+                            <div>
+                                <span class="text-xs text-gray-500 block mb-1">📊 疗效</span>
+                                <span class="text-sm px-2 py-1 rounded inline-block ${extracted.efficacy.result === 'positive' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                    ${extracted.efficacy.result === 'positive' ? '✅ 有效' : '⚠️ 无效'}
+                                </span>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                
+                <!-- 摘要 -->
+                <div class="text-sm text-gray-700 mb-3 p-3 bg-yellow-50 rounded-lg border-l-4 border-yellow-400">
+                    <span class="text-xs text-yellow-600 font-medium block mb-1">📌 快速了解</span>
+                    ${summary}
+                </div>
+                
+                <!-- 按钮 -->
+                <div class="flex space-x-2 border-t pt-3">
+                    <button class="flex-1 py-2 text-sm bg-green-50 text-green-700 rounded hover:bg-green-100 transition-colors">
+                        <span class="mr-1">👨‍👩‍👧</span> 存入家庭健康
+                    </button>
+                    <button class="flex-1 py-2 text-sm bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition-colors">
+                        <span class="mr-1">🔔</span> 设提醒
+                    </button>
+                    <a href="#" class="flex-1 py-2 text-sm bg-gray-50 text-gray-600 rounded hover:bg-gray-100 transition-colors flex items-center justify-center">
+                        <span class="mr-1">📖</span> 原文
+                    </a>
+                </div>
+                
+                <!-- 反馈 -->
+                <div class="flex justify-end space-x-3 mt-2 text-xs text-gray-400">
+                    <button class="hover:text-green-600">👍 有帮助</button>
+                    <button class="hover:text-red-600">👎 没帮助</button>
+                </div>
+            `;
+            
+            document.getElementById(containerId).appendChild(card);
+        }
+
+        // 测试用例
+        const testCases = [
+            {
+                id: 'card1',
+                title: '冠心病不稳定型心绞痛诊疗案例',
+                content: '患者，男性，56岁，因"反复胸痛3天"入院。诊断：冠心病 不稳定型心绞痛。治疗：给予阿司匹林100mg qd，氯吡格雷75mg qd。疗效：症状明显缓解。',
+                source: 'yiigle',
+                date: '2024-01-15'
+            },
+            {
+                id: 'card2',
+                title: '上呼吸道感染案例',
+                content: '患者头痛发热3天，诊断为上呼吸道感染，给予布洛芬治疗，症状缓解。',
+                source: 'platform',
+                date: '2024-01-14'
+            },
+            {
+                id: 'card3',
+                title: '阿司匹林药品说明书',
+                content: '【药品名称】阿司匹林肠溶片【适应症】用于缓解轻至中度疼痛，如头痛、牙痛，也用于感冒、流感等发热疾病的退热。【用法用量】口服。成人一次1片。【禁忌】对阿司匹林过敏者禁用。',
+                source: 'platform',
+                date: '2024-01-13'
+            }
+        ];
+
+        // 渲染所有卡片
+        renderCard('card1', testCases[0]);
+        renderCard('card2', testCases[1]);
+        renderCard('card3', testCases[2]);
+    </script>
+</body>
+</html>

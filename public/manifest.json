@@ -1,0 +1,26 @@
+{
+  "short_name": "众创医案",
+  "name": "众创医案平台 - 中医医案共享平台",
+  "description": "专业的中医医案共享、学习与交流平台",
+  "icons": [
+    {
+      "src": "logo-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#2E8B57",
+  "background_color": "#FFFFFF",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "categories": ["medical", "health", "education"],
+  "lang": "zh-CN"
+}

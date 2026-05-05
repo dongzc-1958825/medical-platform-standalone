@@ -1,0 +1,63 @@
+/* src/index.css */
+@import './styles/mobile-optimizations.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 基础移动端优化 */
+html {
+  -webkit-overflow-scrolling: touch;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* 移动端触摸反馈优化 */
+button, 
+a,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* 移动端输入优化 */
+input, 
+textarea, 
+select {
+  font-size: 16px;
+  border-radius: 0;
+}
+
+/* 修复iOS输入框内阴影 */
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="password"],
+textarea {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* 移动端滚动优化 */
+.mobile-scroll {
+  -webkit-overflow-scrolling: touch;
+  overflow-scrolling: touch;
+}
+
+/* 隐藏移动端滚动条但保持滚动功能 */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}

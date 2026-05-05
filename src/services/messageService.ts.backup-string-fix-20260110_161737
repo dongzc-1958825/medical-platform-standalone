@@ -1,0 +1,220 @@
+﻿// src/services/messageService.ts
+import { MessageItem, MessageCategory, MessageComment } from '@/types/message';
+
+class MessageService {
+  private readonly MESSAGES_KEY = 'medical-platform-messages';
+ 
+  // 鑾峰彇鎵€鏈夊垎绫?
+  getCategories(): MessageCategory[] {
+    return [
+      {
+        id: 'new_medicine',
+        name: '鏂拌嵂淇℃伅',
+        icon: '馃拪',
+        description: '鏈€鏂拌嵂鍝佷俊鎭拰涓村簥搴旂敤',
+        count: 12
+      },
+      {
+        id: 'professional_article',
+        name: '涓撲笟鏂囩珷',
+        icon: '馃摎',
+        description: '鍖诲涓撲笟鏂囩尞鍜岀爺绌舵垚鏋?,
+        count: 8
+      },
+      {
+        id: 'announcement',
+        name: '鍏憡鍙戝竷',
+        icon: '馃摙',
+        description: '骞冲彴鍏憡鍜岄噸瑕侀€氱煡',
+        count: 5
+      },
+      {
+        id: 'special_effect',
+        name: '鐗规晥鍒嗕韩',
+        icon: '馃専',
+        description: '鐗规晥娌荤枟鏂规鍜岀粡楠屽垎浜?,
+        count: 15
+      },
+      {
+        id: 'lesson_learned',
+        name: '鍓嶈溅涔嬮壌',
+        icon: '鈿狅笍',
+        description: '鍖荤枟鏁欒鍜岄闄╄绀?,
+        count: 7
+      }
+    ];
+  }
+
+  // 鑾峰彇鏌愪釜鍒嗙被涓嬬殑娑堟伅鍒楄〃
+  getMessagesByCategory(categoryId: string): MessageItem[] {
+    const allMessages = this.getAllMessages();
+    return allMessages.filter(msg => msg.type === categoryId);
+  }
+
+  // 鑾峰彇鎵€鏈夋秷鎭?
+  getAllMessages(): MessageItem[] {
+    try {
+      const stored = localStorage.getItem(this.MESSAGES_KEY);
+      if (stored) {
+        return JSON.parse(stored);
+      }
+      // 棣栨浣跨敤锛屽垵濮嬪寲妯℃嫙鏁版嵁
+      const initialData = this.getInitialMessages();
+      this.saveAllMessages(initialData);
+      return initialData;
+    } catch (error) {
+      console.error('鑾峰彇娑堟伅澶辫触:', error);
+      return this.getInitialMessages();
+    }
+  }
+
+  // 娣诲姞鏂版秷鎭?
+  addMessage(message: Omit<MessageItem, 'id' | 'viewCount' | 'likeCount' | 'commentCount' | 'comments'>): MessageItem {
+    const messages = this.getAllMessages();
+    const newMessage: MessageItem = {
+      ...message,
+      id: `msg_${Date.now()}`,
+      viewCount: 0,
+      likeCount: 0,
+      commentCount: 0,
+      comments: []
+    };
+    
+    messages.unshift(newMessage);
+    this.saveAllMessages(messages);
+    return newMessage;
+  }
+
+  // 娣诲姞璇勮
+  addComment(messageId: string, comment: Omit<MessageComment, 'id'>): MessageComment {
+    const messages = this.getAllMessages();
+    const messageIndex = messages.findIndex(msg => msg.id === messageId);
+    
+    if (messageIndex === -1) {
+      throw new Error('娑堟伅涓嶅瓨鍦?);
+    }
+
+    const newComment: MessageComment = {
+      ...comment,
+      id: `comment_${Date.now()}`
+    };
+
+    messages[messageIndex].comments.push(newComment);
+    messages[messageIndex].commentCount += 1;
+    this.saveAllMessages(messages);
+    
+    return newComment;
+  }
+
+  // 鐐硅禐娑堟伅
+  likeMessage(messageId: string): void {
+    const messages = this.getAllMessages();
+    const messageIndex = messages.findIndex(msg => msg.id === messageId);
+    
+    if (messageIndex !== -1) {
+      messages[messageIndex].likeCount += 1;
+      this.saveAllMessages(messages);
+    }
+  }
+
+  // 澧炲姞娴忚閲?
+  incrementViewCount(messageId: string): void {
+    const messages = this.getAllMessages();
+    const messageIndex = messages.findIndex(msg => msg.id === messageId);
+    
+    if (messageIndex !== -1) {
+      messages[messageIndex].viewCount += 1;
+      this.saveAllMessages(messages);
+    }
+  }
+
+  private saveAllMessages(messages: MessageItem[]): void {
+    localStorage.setItem(this.MESSAGES_KEY, JSON.stringify(messages));
+  }
+
+  private getInitialMessages(): MessageItem[] {
+    return [
+      // 鏂拌嵂淇℃伅
+      {
+        id: '1',
+        type: 'new_medicine',
+        title: '鏂板瀷闄嶇硸鑽墿XX姝ｅ紡涓婂競',
+        content: '缁忚繃涓夋湡涓村簥璇曢獙锛屾柊鍨嬮檷绯栬嵂鐗X宸茶幏寰楀浗瀹惰嵂鐩戝眬鎵瑰噯涓婂競銆傝鑽墿鍦ㄦ帶鍒惰绯栫殑鍚屾椂锛屽蹇冭绠″叿鏈変繚鎶や綔鐢?..',
+        author: '鑽洃灞€',
+        publishTime: '2025-01-15 09:00',
+        viewCount: 234,
+        likeCount: 45,
+        commentCount: 12,
+        tags: ['鏂拌嵂', '绯栧翱鐥?, '蹇冭绠?],
+        comments: [
+          {
+            id: 'c1',
+            author: '鏉庡尰鐢?,
+            content: '鏈熷緟鍦ㄤ复搴婁腑鐨勫簲鐢ㄦ晥鏋滐紒',
+            time: '2025-01-15 10:30',
+            likes: 5
+          }
+        ],
+        isPinned: true
+      },
+      // 涓撲笟鏂囩珷
+      {
+        id: '2',
+        type: 'professional_article',
+        title: '涓尰娌荤枟鎱㈡€ц儍鐐庣殑涓村簥鐮旂┒',
+        content: '鏈爺绌堕€氳繃瀵?00渚嬫參鎬ц儍鐐庢偅鑰呯殑涓尰娌荤枟瑙傚療锛屽彂鐜颁腑鑽粍鏂瑰湪鏀瑰杽鐥囩姸鍜岃儍闀滆〃鐜版柟闈㈡樉钁椾紭浜庡鐓х粍...',
+        author: '鐜嬫暀鎺?,
+        publishTime: '2025-01-14 14:20',
+        viewCount: 156,
+        likeCount: 32,
+        commentCount: 8,
+        tags: ['涓尰', '鑳冪値', '涓村簥鐮旂┒'],
+        comments: []
+      },
+      // 鍏憡鍙戝竷
+      {
+        id: '3',
+        type: 'announcement',
+        title: '骞冲彴绯荤粺缁存姢閫氱煡',
+        content: '涓轰簡鎻愪緵鏇村ソ鐨勬湇鍔★紝骞冲彴灏嗕簬鏈懆鍏噷鏅?:00-4:00杩涜绯荤粺缁存姢锛屾湡闂村彲鑳芥棤娉曟甯歌闂紝鏁璋呰В銆?,
+        author: '绯荤粺绠＄悊鍛?,
+        publishTime: '2025-01-13 16:45',
+        viewCount: 189,
+        likeCount: 12,
+        commentCount: 3,
+        comments: [],
+        isPinned: true
+      },
+      // 鐗规晥鍒嗕韩
+      {
+        id: '4',
+        type: 'special_effect',
+        title: '閽堢伕娌荤枟鍋忓ご鐥涚殑鐗规晥绌翠綅',
+        content: '閫氳繃澶氬勾涓村簥瀹炶返锛屽彂鐜板お闃崇┐閰嶅悎椋庢睜绌寸殑閽堢伕娌荤枟瀵瑰亸澶寸棝鏈夋樉钁楁晥鏋滐紝鏈夋晥鐜囪揪鍒?5%浠ヤ笂...',
+        author: '寮犻拡鐏稿笀',
+        publishTime: '2025-01-12 11:30',
+        viewCount: 278,
+        likeCount: 67,
+        commentCount: 15,
+        tags: ['閽堢伕', '鍋忓ご鐥?, '鐗规晥'],
+        comments: []
+      },
+      // 鍓嶈溅涔嬮壌
+      {
+        id: '5',
+        type: 'lesson_learned',
+        title: '涓嵂閰嶄紞绂佸繉妗堜緥鍒嗕韩',
+        content: '杩戞湡鎺ヨ瘖涓€渚嬪洜涓嶅綋涓嵂閰嶄紞瀵艰嚧鐨勮倽鍔熻兘寮傚父鎮ｈ€咃紝鐗规鎻愰啋鍚勪綅鍚岃娉ㄦ剰鐩稿叧鑽墿鐨勯厤浼嶇蹇?..',
+        author: '璧靛尰鐢?,
+        publishTime: '2025-01-11 08:15',
+        viewCount: 312,
+        likeCount: 89,
+        commentCount: 24,
+        tags: ['涓嵂', '閰嶄紞绂佸繉', '妗堜緥'],
+        comments: []
+      }
+    ];
+  }
+}
+
+export const messageService = new MessageService();

@@ -1,0 +1,128 @@
+// src/shared/services/aiMedicalService.ts
+
+/**
+ * AI医疗问答服务 - 调用DeepSeek API
+ * 返回结构化JSON数据，用于卡片展示
+ */
+
+export interface AIMedicalAnswer {
+  summary: string;
+  drugs: Array<{
+    name: string;
+    category: string;
+    indications: string;
+    contraindications: string;
+    usage: string;
+    sideEffects: string;
+  }>;
+  lifestyle: string[];
+  whenToSeeDoctor: string;
+}
+
+class AIMedicalService {
+  
+  private apiKey = 'sk-4f144818175a4d55957010e4c1fcd57b';
+  private apiUrl = 'https://api.deepseek.com/v1/chat/completions';
+
+  async getDrugAdvice(question: string, patientInfo?: any): Promise<AIMedicalAnswer> {
+    console.log(`🤖 AI用药指导: ${question}`);
+    
+    // 构建患者信息文本
+    let patientInfoText = '';
+    if (patientInfo) {
+      const info = [];
+      if (patientInfo.age) info.push(`年龄${patientInfo.age}岁`);
+      if (patientInfo.isChild) info.push('儿童');
+      if (patientInfo.isElderly) info.push('老年人');
+      if (patientInfo.conditions?.length) info.push(`基础病：${patientInfo.conditions.join('、')}`);
+      if (patientInfo.allergies?.length) info.push(`过敏史：${patientInfo.allergies.join('、')}`);
+      if (info.length) {
+        patientInfoText = `\n患者信息：${info.join('、')}`;
+      }
+    }
+    
+    // 要求AI返回JSON格式
+    const prompt = `请提供关于"${question}"的专业用药指导。${patientInfoText}
+
+请严格按照以下JSON格式返回，不要输出任何其他内容：
+
+{
+  "summary": "病情简介和治疗原则（1-2句话）",
+  "drugs": [
+    {
+      "name": "药品名称",
+      "category": "药物类别",
+      "indications": "适应症",
+      "contraindications": "禁忌症",
+      "usage": "用法用量",
+      "sideEffects": "常见副作用"
+    }
+  ],
+  "lifestyle": ["生活方式建议1", "生活方式建议2", "生活方式建议3"],
+  "whenToSeeDoctor": "何时需要就医"
+}`;
+
+    try {
+      const response = await fetch(this.apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [
+            {
+              role: 'system',
+              content: '你是一个专业的药学顾问。请始终返回JSON格式，不要输出任何其他文字。'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0.3
+        })
+      });
+      
+      const data = await response.json();
+      const content = data.choices[0].message.content;
+      
+      // 解析JSON
+      let result;
+      try {
+        result = JSON.parse(content);
+      } catch {
+        // 如果AI返回的不是纯JSON，尝试提取
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          result = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('无法解析AI返回');
+        }
+      }
+      
+      return {
+        summary: result.summary || `关于${question}的用药指导`,
+        drugs: result.drugs || [],
+        lifestyle: result.lifestyle || [],
+        whenToSeeDoctor: result.whenToSeeDoctor || '症状持续请及时就医'
+      };
+      
+    } catch (error) {
+      console.error('AI调用失败:', error);
+      return this.getFallbackAdvice(question);
+    }
+  }
+
+  private getFallbackAdvice(question: string): AIMedicalAnswer {
+    return {
+      summary: `关于"${question}"的问题，建议咨询医生或药师。`,
+      drugs: [],
+      lifestyle: ['保持健康生活方式', '规律作息', '均衡饮食'],
+      whenToSeeDoctor: '症状持续或加重请及时就医'
+    };
+  }
+}
+
+export const aiMedicalService = new AIMedicalService();

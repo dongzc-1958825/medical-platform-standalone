@@ -1,0 +1,96 @@
+// 在组件内部添加这个函数（在useEffect之后）
+const generateMockFilePackage = (data: any, type: ExportDataType, format: 'html' | 'json'): FileExportPackage => {
+  const timestamp = new Date().toISOString();
+  const fileName = `${type}_${new Date().toISOString().split('T')[0]}.${format}`;
+  
+  // 生成模拟数据URL
+  let fileContent: string;
+  if (format === 'html') {
+    fileContent = `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${type} - 众创医案平台</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .header { background: #f0f7ff; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .content { background: white; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; }
+        pre { background: #f5f5f5; padding: 15px; border-radius: 5px; overflow: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>众创医案平台 - 数据导出</h1>
+            <p>数据类型: ${getTypeDisplayName(type)}</p>
+            <p>生成时间: ${new Date(timestamp).toLocaleString('zh-CN')}</p>
+        </div>
+        <div class="content">
+            <h2>数据内容</h2>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+        </div>
+    </div>
+</body>
+</html>`;
+  } else {
+    fileContent = JSON.stringify({
+      metadata: {
+        platform: "众创医案平台",
+        type: type,
+        displayName: getTypeDisplayName(type),
+        timestamp: timestamp,
+        version: "1.0"
+      },
+      data: data
+    }, null, 2);
+  }
+  
+  return {
+    type,
+    fileName,
+    fileSize: format === 'html' ? '15.2 KB' : '8.7 KB',
+    fileUrl: `data:text/${format === 'html' ? 'html' : 'json'};charset=utf-8,${encodeURIComponent(fileContent)}`,
+    timestamp,
+    instructions: [
+      '1. 点击下载按钮保存文件到电脑',
+      '2. 打开微信电脑版或网页版',
+      '3. 在聊天窗口中选择"文件传输助手"',
+      '4. 将下载的文件拖入聊天窗口发送',
+      '5. 在手机微信中打开文件查看'
+    ],
+    data: data
+  };
+};
+
+// 修改useEffect
+useEffect(() => {
+  // 根据选择的格式生成文件包
+  let packageData;
+  
+  // 检查服务方法是否存在，不存在则使用本地模拟
+  if (fileFormat === 'html') {
+    if (RealFileService && (RealFileService as any).generateMobileFriendlyFile) {
+      packageData = (RealFileService as any).generateMobileFriendlyFile(data, dataType);
+    } else {
+      packageData = generateMockFilePackage(data, dataType, 'html');
+    }
+  } else {
+    if (RealFileService && (RealFileService as any).generateFilePackage) {
+      packageData = (RealFileService as any).generateFilePackage(data, dataType);
+    } else {
+      packageData = generateMockFilePackage(data, dataType, 'json');
+    }
+  }
+  
+  setFilePackage(packageData);
+
+  // 清理函数 - 检查方法是否存在
+  return () => {
+    if (packageData && RealFileService && (RealFileService as any).revokeFileUrl) {
+      (RealFileService as any).revokeFileUrl(packageData.fileUrl);
+    }
+  };
+}, [data, dataType, fileFormat]);

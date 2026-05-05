@@ -1,0 +1,4 @@
+﻿src/shared/constants/navigation.ts(109,10): error TS1127: Invalid character.
+src/shared/constants/navigation.ts(109,11): error TS1127: Invalid character.
+src/shared/constants/navigation.ts(109,12): error TS1127: Invalid character.
+src/shared/constants/navigation.ts(109,13): error TS1127: Invalid character.

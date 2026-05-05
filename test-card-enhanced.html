@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SearchResultCard 增强版测试</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #f3f4f6; padding: 20px; font-family: system-ui, -apple-system, sans-serif; }
+        .test-container { max-width: 600px; margin: 0 auto; }
+        .test-tab { 
+            display: inline-block; 
+            padding: 8px 16px; 
+            margin-right: 8px; 
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            background: #e5e7eb;
+        }
+        .test-tab.active {
+            background: white;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1 class="text-2xl font-bold mb-4">🔬 SearchResultCard 增强版测试</h1>
+        
+        <!-- 标签页 -->
+        <div class="flex mb-4">
+            <div class="test-tab active" onclick="switchTab('case')">📋 医案测试</div>
+            <div class="test-tab" onclick="switchTab('drug')">💊 药品测试</div>
+        </div>
+
+        <!-- 医案测试区 -->
+        <div id="caseTests" class="tab-content">
+            <div class="mb-4 p-3 bg-blue-50 rounded-lg">
+                <p class="font-medium">测试用例1：完整医案（冠心病）</p>
+                <p class="text-sm text-gray-600 mt-1">应显示：患者信息、基础病、症状、诊断、用药、疗效、医院信息</p>
+            </div>
+            <div id="caseCard1" class="mb-6"></div>
+
+            <div class="mb-4 p-3 bg-green-50 rounded-lg">
+                <p class="font-medium">测试用例2：简短医案（感冒）</p>
+                <p class="text-sm text-gray-600 mt-1">应显示：症状、诊断、用药、疗效</p>
+            </div>
+            <div id="caseCard2" class="mb-6"></div>
+
+            <div class="mb-4 p-3 bg-purple-50 rounded-lg">
+                <p class="font-medium">测试用例3：详细医案（含医院医生）</p>
+                <p class="text-sm text-gray-600 mt-1">应显示：患者姓名(脱敏)、医院、医生信息</p>
+            </div>
+            <div id="caseCard3" class="mb-6"></div>
+        </div>
+
+        <!-- 药品测试区 -->
+        <div id="drugTests" class="tab-content hidden">
+            <div class="mb-4 p-3 bg-orange-50 rounded-lg">
+                <p class="font-medium">测试用例4：完整药品说明书</p>
+                <p class="text-sm text-gray-600 mt-1">应显示：药品名、适应症、禁忌、用法、价格、医保、厂家</p>
+            </div>
+            <div id="drugCard1" class="mb-6"></div>
+
+            <div class="mb-4 p-3 bg-yellow-50 rounded-lg">
+                <p class="font-medium">测试用例5：简化药品信息</p>
+                <p class="text-sm text-gray-600 mt-1">应显示：核心药品信息</p>
+            </div>
+            <div id="drugCard2" class="mb-6"></div>
+        </div>
+
+        <!-- 检查清单 -->
+        <div class="mt-6 p-4 bg-gray-100 rounded-lg">
+            <h3 class="font-bold mb-2">✅ 测试检查清单</h3>
+            <div class="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                    <p class="font-medium">医案信息：</p>
+                    <ul class="list-disc ml-4 text-xs space-y-1">
+                        <li>□ 患者姓名（脱敏）</li>
+                        <li>□ 年龄/性别</li>
+                        <li>□ 基础病史</li>
+                        <li>□ 症状列表</li>
+                        <li>□ 诊断结果</li>
+                        <li>□ 用药详情</li>
+                        <li>□ 疗效评估</li>
+                        <li>□ 医院信息</li>
+                        <li>□ 医生信息</li>
+                    </ul>
+                </div>
+                <div>
+                    <p class="font-medium">药品信息：</p>
+                    <ul class="list-disc ml-4 text-xs space-y-1">
+                        <li>□ 药品名称</li>
+                        <li>□ 适应症</li>
+                        <li>□ 禁忌症</li>
+                        <li>□ 用法用量</li>
+                        <li>□ 价格</li>
+                        <li>□ 医保类型</li>
+                        <li>□ 生产厂家</li>
+                        <li>□ 不良反应</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 标签页切换
+        function switchTab(tab) {
+            document.querySelectorAll('.test-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            
+            if (tab === 'case') {
+                document.querySelector('.test-tab:first-child').classList.add('active');
+                document.getElementById('caseTests').classList.remove('hidden');
+            } else {
+                document.querySelector('.test-tab:last-child').classList.add('active');
+                document.getElementById('drugTests').classList.remove('hidden');
+            }
+        }
+
+        // ==================== 增强提取器（简化测试版）====================
+        class EnhancedExtractor {
+            // 提取医案信息
+            extractCase(text) {
+                return {
+                    patient: this.extractPatientInfo(text),
+                    symptoms: this.extractSymptoms(text),
+                    diagnosis: this.extractDiagnosis(text),
+                    treatment: this.extractTreatment(text),
+                    efficacy: this.extractEfficacy(text),
+                    hospital: this.extractHospitalInfo(text),
+                    confidence: this.calculateConfidence(text)
+                };
+            }
+
+            // 提取患者信息
+            extractPatientInfo(text) {
+                const info = { gender: '未知' };
+
+                // 姓名脱敏
+                const nameMatch = text.match(/([王李张刘陈杨赵黄周吴][某]{1,2})/);
+                if (nameMatch) info.name = nameMatch[1];
+
+                // 年龄
+                const ageMatch = text.match(/(\d+)[岁]?/);
+                if (ageMatch) info.age = parseInt(ageMatch[1]);
+
+                // 性别
+                if (text.includes('男')) info.gender = '男';
+                else if (text.includes('女')) info.gender = '女';
+
+                // 基础病
+                const diseases = [];
+                if (text.includes('高血压')) diseases.push('高血压');
+                if (text.includes('糖尿病')) diseases.push('糖尿病');
+                if (text.includes('冠心病')) diseases.push('冠心病');
+                if (diseases.length > 0) info.baseline = { diseases };
+
+                // 发病时间
+                const onsetMatch = text.match(/(\d+)(天|周|月|年)/);
+                if (onsetMatch) info.onsetTime = onsetMatch[0];
+
+                return info;
+            }
+
+            // 提取症状
+            extractSymptoms(text) {
+                const symptoms = { primary: [] };
+                const symptomList = ['发热', '头痛', '胸痛', '腹痛', '咳嗽', '咳痰', '呼吸困难'];
+                symptomList.forEach(s => {
+                    if (text.includes(s)) symptoms.primary.push(s);
+                });
+
+                const durationMatch = text.match(/(\d+)(天|周|月|年)/);
+                if (durationMatch) symptoms.duration = durationMatch[0];
+
+                const descMatch = text.match(/症状[：:]\s*([^。；，\n]+)/);
+                if (descMatch) symptoms.description = descMatch[1];
+
+                return symptoms;
+            }
+
+            // 提取诊断
+            extractDiagnosis(text) {
+                const diagnosis = { primary: '未知' };
+                const match = text.match(/诊断[：:]\s*([^。；，\n]+)/) ||
+                             text.match(/诊断为\s*([^。；，\n]+)/);
+                if (match) diagnosis.primary = match[1].trim();
+                return diagnosis;
+            }
+
+            // 提取治疗
+            extractTreatment(text) {
+                const treatment = { medications: [], procedures: [] };
+                
+                // 用药
+                const drugList = ['阿司匹林', '布洛芬', '氯吡格雷', '阿托伐他汀', '二甲双胍'];
+                drugList.forEach(drug => {
+                    if (text.includes(drug)) {
+                        const med = { name: drug };
+                        const dosageMatch = text.match(new RegExp(drug + '(\\s*)(\\d+)(mg|g|ml)?'));
+                        if (dosageMatch) med.dosage = dosageMatch[2] + (dosageMatch[3] || '');
+                        treatment.medications.push(med);
+                    }
+                });
+
+                return treatment;
+            }
+
+            // 提取疗效
+            extractEfficacy(text) {
+                const efficacy = { outcome: '未知' };
+                if (text.includes('治愈')) efficacy.outcome = '治愈';
+                else if (text.includes('缓解') || text.includes('好转')) efficacy.outcome = '好转';
+                else if (text.includes('无效')) efficacy.outcome = '无效';
+                return efficacy;
+            }
+
+            // 提取医院信息
+            extractHospitalInfo(text) {
+                const hospital = {};
+                
+                const hospitalMatch = text.match(/([^。；，\n]+?)(医院|卫生院)/);
+                if (hospitalMatch) hospital.name = hospitalMatch[1] + hospitalMatch[2];
+
+                const deptMatch = text.match(/([^。；，\n]+?)(科|科室)/);
+                if (deptMatch) hospital.department = deptMatch[1] + deptMatch[2];
+
+                const doctorMatch = text.match(/([王李张刘陈][某]{0,2})(医生|医师)/);
+                if (doctorMatch) hospital.doctor = doctorMatch[1] + (doctorMatch[2] || '医生');
+
+                return hospital;
+            }
+
+            // 提取药品信息
+            extractDrug(text) {
+                const drug = {
+                    name: '未知',
+                    indications: [],
+                    contraindications: [],
+                    precautions: [],
+                    usage: {},
+                    pricing: {}
+                };
+
+                // 药品名称
+                const nameMatch = text.match(/【药品名称】\s*([^【\n]+)/) ||
+                                 text.match(/通用名称[：:]\s*([^【\n]+)/);
+                if (nameMatch) drug.name = nameMatch[1].trim();
+
+                // 适应症
+                const indMatch = text.match(/【适应症】\s*([^【\n]+)/) ||
+                                text.match(/适应症[：:]\s*([^【\n]+)/);
+                if (indMatch) {
+                    drug.indications = indMatch[1].split(/[，,、]/).map(s => s.trim());
+                }
+
+                // 禁忌症
+                const contraMatch = text.match(/【禁忌】\s*([^【\n]+)/) ||
+                                   text.match(/禁忌症[：:]\s*([^【\n]+)/);
+                if (contraMatch) {
+                    drug.contraindications = contraMatch[1].split(/[，,、]/).map(s => s.trim());
+                }
+
+                // 用法用量
+                const usageMatch = text.match(/【用法用量】\s*([^【\n]+)/) ||
+                                  text.match(/用法用量[：:]\s*([^【\n]+)/);
+                if (usageMatch) drug.usage.dosage = usageMatch[1].trim();
+
+                // 价格
+                const priceMatch = text.match(/(\d+(\.\d+)?)元/);
+                if (priceMatch) drug.pricing.price = parseFloat(priceMatch[1]);
+
+                // 医保
+                if (text.includes('甲类')) drug.pricing.insuranceType = '甲类';
+                else if (text.includes('乙类')) drug.pricing.insuranceType = '乙类';
+
+                // 厂家
+                const manuMatch = text.match(/【生产企业】\s*([^【\n]+)/) ||
+                                 text.match(/生产厂家[：:]\s*([^【\n]+)/);
+                if (manuMatch) drug.pricing.manufacturer = manuMatch[1].trim();
+
+                // 不良反应
+                const sideMatch = text.match(/【不良反应】\s*([^【\n]+)/);
+                if (sideMatch) {
+                    drug.sideEffects = sideMatch[1].split(/[，,、]/).map(s => s.trim());
+                }
+
+                return drug;
+            }
+
+            // 生成医案摘要
+            generateCaseSummary(info) {
+                const parts = [];
+                if (info.patient.name) parts.push(info.patient.name);
+                if (info.patient.age) parts.push(`${info.patient.age}岁`);
+                if (info.patient.gender !== '未知') parts.push(info.patient.gender);
+                if (info.symptoms.primary.length) parts.push(`因${info.symptoms.primary.join('、')}就诊`);
+                if (info.diagnosis.primary !== '未知') parts.push(`诊断为${info.diagnosis.primary}`);
+                if (info.treatment.medications.length) parts.push(`用${info.treatment.medications.map(m => m.name).join('、')}治疗`);
+                if (info.efficacy.outcome !== '未知') parts.push(`疗效${info.efficacy.outcome}`);
+                return parts.join('，') + '。';
+            }
+
+            // 生成药品摘要
+            generateDrugSummary(drug) {
+                const parts = [`【${drug.name}】`];
+                if (drug.indications.length) parts.push(`适应：${drug.indications.slice(0,2).join('、')}`);
+                if (drug.usage.dosage) parts.push(`用法：${drug.usage.dosage}`);
+                if (drug.pricing.price) parts.push(`¥${drug.pricing.price}元`);
+                if (drug.pricing.insuranceType) parts.push(`医保：${drug.pricing.insuranceType}`);
+                return parts.join('；');
+            }
+
+            calculateConfidence(text) {
+                let score = 0;
+                if (text.includes('患者')) score += 10;
+                if (text.includes('诊断')) score += 15;
+                if (text.includes('治疗')) score += 15;
+                if (text.match(/\d+岁/)) score += 10;
+                if (text.includes('男') || text.includes('女')) score += 10;
+                return Math.min(score, 100);
+            }
+        }
+
+        const extractor = new EnhancedExtractor();
+
+        // ==================== 渲染卡片函数 ====================
+        function renderCaseCard(containerId, testCase) {
+            const info = extractor.extractCase(testCase.content);
+            const summary = extractor.generateCaseSummary(info);
+            
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-lg shadow-md p-4 mb-4 hover:shadow-lg transition-all';
+            
+            card.innerHTML = `
+                <!-- 头部 -->
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center space-x-2">
+                        <span class="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                            🏥 平台医案
+                        </span>
+                        ${info.confidence > 70 ? `
+                            <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">
+                                ⭐ 高可信度 ${info.confidence}%
+                            </span>
+                        ` : ''}
+                    </div>
+                    <span class="text-xs text-gray-400">${testCase.date}</span>
+                </div>
+                
+                <!-- 标题 -->
+                <h3 class="font-bold text-lg mb-2 text-gray-800">${testCase.title}</h3>
+                
+                <!-- 患者信息 -->
+                <div class="bg-gray-50 rounded-lg p-3 mb-3">
+                    ${info.patient.name || info.patient.age || info.patient.gender !== '未知' ? `
+                        <div class="mb-2 pb-2 border-b border-gray-200">
+                            <span class="text-xs text-gray-500 block mb-1">👤 患者信息</span>
+                            <div class="flex flex-wrap items-center gap-2">
+                                ${info.patient.name ? `<span class="text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded">${info.patient.name}</span>` : ''}
+                                ${info.patient.age ? `<span class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">${info.patient.age}岁</span>` : ''}
+                                ${info.patient.gender !== '未知' ? `<span class="text-sm bg-pink-100 text-pink-800 px-2 py-1 rounded">${info.patient.gender}性</span>` : ''}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${info.patient.baseline?.diseases?.length ? `
+                        <div class="mb-2 pb-2 border-b border-gray-200">
+                            <span class="text-xs text-gray-500 block mb-1">🏥 基础病史</span>
+                            <div class="flex flex-wrap gap-1">
+                                ${info.patient.baseline.diseases.map(d => 
+                                    `<span class="px-2 py-1 bg-yellow-50 text-yellow-700 text-xs rounded">${d}</span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${info.symptoms.primary.length ? `
+                        <div class="mb-2 pb-2 border-b border-gray-200">
+                            <span class="text-xs text-gray-500 block mb-1">🤒 症状</span>
+                            <div class="flex flex-wrap gap-1">
+                                ${info.symptoms.primary.map(s => 
+                                    `<span class="px-2 py-1 bg-red-50 text-red-700 text-xs rounded-full">${s}</span>`
+                                ).join('')}
+                                ${info.symptoms.duration ? 
+                                    `<span class="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">${info.symptoms.duration}</span>` 
+                                    : ''}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${info.diagnosis.primary !== '未知' ? `
+                        <div class="mb-2 pb-2 border-b border-gray-200">
+                            <span class="text-xs text-gray-500 block mb-1">🏷️ 诊断</span>
+                            <span class="text-sm font-medium text-purple-700 bg-purple-50 px-2 py-1 rounded inline-block">
+                                ${info.diagnosis.primary}
+                            </span>
+                        </div>
+                    ` : ''}
+
+                    ${info.treatment.medications.length ? `
+                        <div class="mb-2 pb-2 border-b border-gray-200">
+                            <span class="text-xs text-gray-500 block mb-1">💊 用药</span>
+                            <div class="space-y-1">
+                                ${info.treatment.medications.map(m => `
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm font-medium text-blue-700">${m.name}</span>
+                                        ${m.dosage ? `<span class="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded">${m.dosage}</span>` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${info.efficacy.outcome !== '未知' ? `
+                        <div class="mb-2 pb-2 border-b border-gray-200">
+                            <span class="text-xs text-gray-500 block mb-1">📊 疗效</span>
+                            <span class="text-sm px-2 py-1 rounded inline-block ${
+                                info.efficacy.outcome === '治愈' ? 'bg-green-100 text-green-800' :
+                                info.efficacy.outcome === '好转' ? 'bg-blue-100 text-blue-800' :
+                                info.efficacy.outcome === '无效' ? 'bg-red-100 text-red-800' :
+                                'bg-gray-100 text-gray-800'
+                            }">
+                                ${info.efficacy.outcome}
+                            </span>
+                        </div>
+                    ` : ''}
+
+                    ${info.hospital.name || info.hospital.doctor ? `
+                        <div class="mb-2">
+                            <span class="text-xs text-gray-500 block mb-1">🏥 就诊信息</span>
+                            <div class="text-sm">
+                                ${info.hospital.name ? `<span class="text-gray-700">${info.hospital.name}</span>` : ''}
+                                ${info.hospital.department ? `<span class="text-gray-500 text-xs ml-1">${info.hospital.department}</span>` : ''}
+                                ${info.hospital.doctor ? `<div class="text-gray-600 text-sm mt-0.5">接诊医生：${info.hospital.doctor}</div>` : ''}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <!-- 摘要 -->
+                <div class="text-sm text-gray-700 mb-3 p-3 bg-yellow-50 rounded-lg border-l-4 border-yellow-400">
+                    <span class="text-xs text-yellow-600 font-medium block mb-1">📌 案例摘要</span>
+                    ${summary}
+                </div>
+
+                <!-- 按钮 -->
+                <div class="flex space-x-2 border-t pt-3">
+                    <button class="flex-1 py-2 text-sm bg-green-50 text-green-700 rounded hover:bg-green-100 transition-colors">
+                        <span class="mr-1">👨‍👩‍👧</span> 存入家庭健康
+                    </button>
+                    <button class="flex-1 py-2 text-sm bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition-colors">
+                        <span class="mr-1">🔔</span> 设提醒
+                    </button>
+                    <a href="#" class="flex-1 py-2 text-sm bg-gray-50 text-gray-600 rounded hover:bg-gray-100 transition-colors flex items-center justify-center">
+                        <span class="mr-1">📖</span> 原文
+                    </a>
+                </div>
+            `;
+            
+            document.getElementById(containerId).appendChild(card);
+        }
+
+        function renderDrugCard(containerId, testCase) {
+            const info = extractor.extractDrug(testCase.content);
+            const summary = extractor.generateDrugSummary(info);
+            
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-lg shadow-md p-4 mb-4 hover:shadow-lg transition-all';
+            
+            card.innerHTML = `
+                <!-- 头部 -->
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center space-x-2">
+                        <span class="px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-800">
+                            💊 药品信息
+                        </span>
+                    </div>
+                    <span class="text-xs text-gray-400">${testCase.date}</span>
+                </div>
+                
+                <!-- 标题 -->
+                <h3 class="font-bold text-lg mb-2 text-gray-800">${testCase.title}</h3>
+                
+                <!-- 药品信息 -->
+                <div class="bg-gray-50 rounded-lg p-3 mb-3">
+                    <!-- 药品名称 -->
+                    <div class="mb-2 pb-2 border-b border-gray-200">
+                        <span class="text-xs text-gray-500 block mb-1">💊 药品信息</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-lg font-bold text-purple-800">${info.name}</span>
+                        </div>
+                    </div>
+
+                    ${info.indications.length ? `
+                        <div class="mb-2 pb-2 border-b border-gray-200">
+                            <span class="text-xs text-gray-500 block mb-1">✅ 适应症</span>
+                            <div class="flex flex-wrap gap-1">
+                                ${info.indications.map(i => 
+                                    `<span class="px-2 py-1 bg-green-50 text-green-700 text-xs rounded">${i}</span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${info.contraindications.length ? `
+                        <div class="mb-2 pb-2 border-b border-gray-200">
+                            <span class="text-xs text-gray-500 block mb-1">⚠️ 禁忌症</span>
+                            <div class="flex flex-wrap gap-1">
+                                ${info.contraindications.map(c => 
+                                    `<span class="px-2 py-1 bg-red-50 text-red-700 text-xs rounded">${c}</span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${info.usage.dosage ? `
+                        <div class="mb-2 pb-2 border-b border-gray-200">
+                            <span class="text-xs text-gray-500 block mb-1">💧 用法用量</span>
+                            <div class="text-sm text-gray-800">${info.usage.dosage}</div>
+                        </div>
+                    ` : ''}
+
+                    <div class="grid grid-cols-2 gap-2 mb-2 pb-2 border-b border-gray-200">
+                        ${info.pricing.price ? `
+                            <div>
+                                <span class="text-xs text-gray-500">参考价</span>
+                                <div class="text-sm font-medium text-gray-800">¥${info.pricing.price}元</div>
+                            </div>
+                        ` : ''}
+                        ${info.pricing.insuranceType ? `
+                            <div>
+                                <span class="text-xs text-gray-500">医保类型</span>
+                                <div class="text-sm font-medium ${
+                                    info.pricing.insuranceType === '甲类' ? 'text-green-600' :
+                                    info.pricing.insuranceType === '乙类' ? 'text-blue-600' : 'text-gray-600'
+                                }">${info.pricing.insuranceType}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    ${info.pricing.manufacturer ? `
+                        <div class="mb-2">
+                            <span class="text-xs text-gray-500 block mb-1">🏭 生产厂家</span>
+                            <div class="text-sm text-gray-700">${info.pricing.manufacturer}</div>
+                        </div>
+                    ` : ''}
+
+                    ${info.sideEffects?.length ? `
+                        <div class="mt-2 pt-2 border-t border-gray-200">
+                            <span class="text-xs text-gray-500 block mb-1">📋 不良反应</span>
+                            <div class="flex flex-wrap gap-1">
+                                ${info.sideEffects.map(e => 
+                                    `<span class="px-2 py-1 bg-yellow-50 text-yellow-700 text-xs rounded">${e}</span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <!-- 摘要 -->
+                <div class="text-sm text-gray-700 mb-3 p-3 bg-yellow-50 rounded-lg border-l-4 border-yellow-400">
+                    <span class="text-xs text-yellow-600 font-medium block mb-1">📌 药品简介</span>
+                    ${summary}
+                </div>
+
+                <!-- 按钮 -->
+                <div class="flex space-x-2 border-t pt-3">
+                    <button class="flex-1 py-2 text-sm bg-green-50 text-green-700 rounded hover:bg-green-100 transition-colors">
+                        <span class="mr-1">👨‍👩‍👧</span> 存入家庭健康
+                    </button>
+                    <button class="flex-1 py-2 text-sm bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition-colors">
+                        <span class="mr-1">🔔</span> 设提醒
+                    </button>
+                    <a href="#" class="flex-1 py-2 text-sm bg-gray-50 text-gray-600 rounded hover:bg-gray-100 transition-colors flex items-center justify-center">
+                        <span class="mr-1">📖</span> 原文
+                    </a>
+                </div>
+            `;
+            
+            document.getElementById(containerId).appendChild(card);
+        }
+
+        // ==================== 测试用例 ====================
+        const testCases = {
+            // 医案测试
+            case1: {
+                title: '冠心病不稳定型心绞痛诊疗案例',
+                content: `患者王某某，男性，56岁，因"反复胸痛3天"入院。既往有高血压病史5年、糖尿病3年。
+症状：胸骨后压榨性疼痛，持续5-10分钟，休息可缓解。
+诊断：冠心病 不稳定型心绞痛
+治疗：给予阿司匹林100mg qd，氯吡格雷75mg qd，阿托伐他汀20mg qn。
+疗效：治疗3天后症状明显缓解。
+就诊医院：北京协和医院心内科，接诊医生：张医生`,
+                date: '2024-01-15'
+            },
+            case2: {
+                title: '上呼吸道感染案例',
+                content: '患者头痛发热3天，诊断为上呼吸道感染，给予布洛芬治疗，症状缓解。',
+                date: '2024-01-14'
+            },
+            case3: {
+                title: '高血压诊疗案例',
+                content: `患者李某某，女性，62岁。因"头晕1周"就诊。既往有高血压病史10年。
+症状：头晕、乏力。
+诊断：原发性高血压3级
+治疗：给予硝苯地平控释片30mg qd，厄贝沙坦150mg qd。
+疗效：治疗1周后血压控制良好。
+就诊医院：上海市第一人民医院，接诊医生：刘医生`,
+                date: '2024-01-13'
+            },
+
+            // 药品测试
+            drug1: {
+                title: '阿司匹林肠溶片药品说明书',
+                content: `【药品名称】通用名称：阿司匹林肠溶片
+【适应症】用于缓解轻至中度疼痛，如头痛、牙痛、神经痛、肌肉痛及痛经，也用于感冒、流感等发热疾病的退热，用于预防短暂性脑缺血发作、心肌梗死。
+【禁忌】对阿司匹林过敏者禁用；有活动性溃疡病或其他原因引起的消化道出血者禁用；血友病或血小板减少症患者禁用。
+【用法用量】口服。成人，一次1片（100mg），一日1次；用于解热镇痛，一次1片，若持续发热或疼痛，可间隔4-6小时重复用药1次。
+【不良反应】常见胃肠道反应，如恶心、呕吐、上腹部不适或疼痛等。
+【生产企业】拜耳医药保健有限公司
+参考价格：15.5元/盒，医保甲类`,
+                date: '2024-01-12'
+            },
+            drug2: {
+                title: '布洛芬缓释胶囊',
+                content: `【药品名称】布洛芬缓释胶囊
+【适应症】用于缓解轻至中度疼痛如关节痛、肌肉痛、神经痛、头痛、牙痛、痛经，也用于普通感冒或流行性感冒引起的发热。
+【禁忌】对布洛芬过敏者禁用；孕妇及哺乳期妇女禁用。
+【用法用量】口服，成人一次1粒，一日2次（早晚各一次）。
+价格：18.5元/盒，医保乙类
+生产厂家：中美天津史克制药有限公司`,
+                date: '2024-01-11'
+            }
+        };
+
+        // 渲染所有卡片
+        renderCaseCard('caseCard1', testCases.case1);
+        renderCaseCard('caseCard2', testCases.case2);
+        renderCaseCard('caseCard3', testCases.case3);
+        renderDrugCard('drugCard1', testCases.drug1);
+        renderDrugCard('drugCard2', testCases.drug2);
+
+        // 默认显示医案标签
+        switchTab('case');
+    </script>
+</body>
+</html>

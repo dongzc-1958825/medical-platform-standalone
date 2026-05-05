@@ -1,0 +1,15 @@
+﻿// src/pages/LoginPage.tsx
+import React from 'react';
+
+const LoginPage: React.FC = () => {
+  return (
+    <div>
+      <h1 className="text-2xl font-bold mb-6">登录 / 注册</h1>
+      <div className="bg-white rounded-lg shadow p-6 max-w-md mx-auto">
+        <p className="text-gray-600">这里是登录页面（桌面端）</p>
+      </div>
+    </div>
+  );
+};
+
+export default LoginPage;

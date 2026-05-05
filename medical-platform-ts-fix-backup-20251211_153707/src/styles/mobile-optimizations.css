@@ -1,0 +1,274 @@
+/* src/styles/mobile-optimizations.css */
+/**
+ * 移动端CSS优化
+ * 为众创医案平台移动版提供专门的移动端样式优化
+ */
+
+/* ===== 安全区域支持 ===== */
+.safe-area-padding {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-area-left {
+  padding-left: env(safe-area-inset-left);
+}
+
+.safe-area-right {
+  padding-right: env(safe-area-inset-right);
+}
+
+/* ===== 移动端布局优化 ===== */
+.mobile-container {
+  max-width: 100%;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* 移动端底部导航安全区域 */
+.mobile-bottom-nav {
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+}
+
+/* 固定底部元素的安全区域 */
+.fixed-bottom-safe {
+  bottom: env(safe-area-inset-bottom);
+}
+
+/* ===== 移动端交互优化 ===== */
+/* 触摸反馈优化 */
+.touch-feedback:active {
+  background-color: rgba(0, 0, 0, 0.05);
+  transform: scale(0.98);
+  transition: all 0.1s ease;
+}
+
+/* 长按菜单禁用 */
+.no-context-menu {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* 选择文本允许 */
+.allow-select {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* ===== 移动端输入优化 ===== */
+/* 修复iOS输入框问题 */
+.ios-input-fix {
+  transform: translateZ(0); /* 触发硬件加速 */
+  -webkit-transform: translateZ(0);
+}
+
+/* 防止iOS缩放 */
+.no-zoom {
+  font-size: 16px;
+  max-height: none;
+}
+
+/* 搜索输入框优化 */
+.search-input-mobile {
+  -webkit-appearance: none;
+  border-radius: 8px;
+}
+
+/* ===== 移动端动画优化 ===== */
+/* 硬件加速动画 */
+.hardware-accelerate {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+/* 流畅滚动 */
+.smooth-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ===== 移动端图片优化 ===== */
+.mobile-image {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* 防止图片被拖动 */
+.no-drag {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+}
+
+/* ===== 移动端响应式断点 ===== */
+/* 超小屏幕 (iPhone SE 等) */
+@media (max-width: 320px) {
+  .xs-hidden {
+    display: none !important;
+  }
+  
+  .xs-text-sm {
+    font-size: 0.75rem;
+  }
+}
+
+/* 小屏幕手机 */
+@media (max-width: 375px) {
+  .sm-mobile-padding {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}
+
+/* 中等屏幕手机 */
+@media (max-width: 414px) {
+  .md-mobile-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+}
+
+/* 横屏模式优化 */
+@media (max-height: 500px) and (orientation: landscape) {
+  .landscape-hidden {
+    display: none !important;
+  }
+  
+  .landscape-compact {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+}
+
+/* ===== 移动端组件特定优化 ===== */
+/* 底部导航阴影 */
+.bottom-nav-shadow {
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  -webkit-box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* 卡片触摸效果 */
+.mobile-card {
+  transition: all 0.2s ease;
+  border: 1px solid rgba(229, 231, 235, 0.8);
+}
+
+.mobile-card:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 按钮触摸效果 */
+.mobile-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.mobile-btn:after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.5);
+  opacity: 0;
+  border-radius: 100%;
+  transform: scale(1, 1) translate(-50%);
+  transform-origin: 50% 50%;
+}
+
+.mobile-btn:focus:not(:active)::after {
+  animation: ripple 1s ease-out;
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0, 0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(20, 20);
+    opacity: 0;
+  }
+}
+
+/* ===== 微信浏览器特定优化 ===== */
+/* 微信内置浏览器优化 */
+.wechat-browser-fix {
+  /* 微信浏览器可能需要额外的优化 */
+}
+
+/* 防止微信调整字体大小 */
+.wechat-font-fix {
+  -webkit-text-size-adjust: 100% !important;
+  text-size-adjust: 100% !important;
+}
+
+/* ===== 移动端性能优化 ===== */
+/* 减少重绘和重排 */
+.paint-optimized {
+  will-change: transform;
+  backface-visibility: hidden;
+  perspective: 1000;
+}
+
+/* 移动端加载状态 */
+.mobile-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ===== 移动端调试工具 ===== */
+/* 安全区域可视化（开发时使用） */
+.debug-safe-areas::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top);
+  background: rgba(255, 0, 0, 0.3);
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.debug-safe-areas::after {
+  content: '';
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-bottom);
+  background: rgba(0, 255, 0, 0.3);
+  z-index: 9999;
+  pointer-events: none;
+}

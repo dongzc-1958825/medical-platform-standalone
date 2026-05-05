@@ -1,0 +1,161 @@
+﻿// src/shared/services/communityLifeService.ts
+import { CommunityCategory, CommunityActivity, CommunityStats, CommunityType } from '../types/community';
+
+class CommunityLifeService {
+  private readonly CATEGORIES_KEY = 'community_categories';
+  private readonly ACTIVITIES_KEY = 'community_activities';
+
+  constructor() {
+    this.initCategories();
+  }
+
+  /**
+   * 初始化社区分类数据
+   */
+  private initCategories() {
+    const categories = this.getCategories();
+    if (categories.length === 0) {
+      // 专病社区
+      const diseaseCategories: CommunityCategory[] = [
+        { id: 'fxm', name: '风湿病', pinyin: 'F', description: '风湿病友互助社区', type: 'disease', memberCount: 156, postCount: 89 },
+        { id: 'gxy', name: '高血压', pinyin: 'G', description: '高血压患者交流社区', type: 'disease', memberCount: 234, postCount: 156 },
+        { id: 'tnb', name: '糖尿病', pinyin: 'T', description: '糖尿病患者互助社区', type: 'disease', memberCount: 312, postCount: 203 },
+        { id: 'gxb', name: '冠心病', pinyin: 'G', description: '冠心病患者交流社区', type: 'disease', memberCount: 178, postCount: 97 },
+        { id: 'gjy', name: '关节炎', pinyin: 'G', description: '关节炎病友互助社区', type: 'disease', memberCount: 145, postCount: 78 },
+        { id: 'copf', name: '慢阻肺', pinyin: 'M', description: '慢阻肺患者交流社区', type: 'disease', memberCount: 98, postCount: 56 },
+        { id: 'pjs', name: '偏头痛', pinyin: 'P', description: '偏头痛患者互助社区', type: 'disease', memberCount: 167, postCount: 92 },
+        { id: 'qgy', name: '青光眼', pinyin: 'Q', description: '青光眼患者交流社区', type: 'disease', memberCount: 76, postCount: 43 },
+        { id: 'sxeb', name: '神经性耳聋', pinyin: 'S', description: '耳聋患者互助社区', type: 'disease', memberCount: 54, postCount: 31 },
+        { id: 'ylxgb', name: '乙型肝炎', pinyin: 'Y', description: '乙肝患者交流社区', type: 'disease', memberCount: 189, postCount: 112 },
+        { id: 'yxj', name: '抑郁症', pinyin: 'Y', description: '抑郁症患者互助社区', type: 'disease', memberCount: 278, postCount: 187 },
+        { id: 'gm', name: '感冒', pinyin: 'G', description: '感冒病友交流社区', type: 'disease', memberCount: 423, postCount: 301 }
+      ];
+
+      // 其他社区
+      const otherCategories: CommunityCategory[] = [
+        { id: 'xljk', name: '心理健康', pinyin: 'X', description: '心理健康交流社区', type: 'other', memberCount: 567, postCount: 432 },
+        { id: 'zyyx', name: '中药研学', pinyin: 'Z', description: '中药学习交流社区', type: 'other', memberCount: 345, postCount: 278 },
+        { id: 'zjxx', name: '针灸学习', pinyin: 'Z', description: '针灸学习交流社区', type: 'other', memberCount: 234, postCount: 167 },
+        { id: 'tjys', name: '太极养生', pinyin: 'T', description: '太极养生交流社区', type: 'other', memberCount: 189, postCount: 134 },
+        { id: 'yyys', name: '营养饮食', pinyin: 'Y', description: '营养饮食交流社区', type: 'other', memberCount: 456, postCount: 321 },
+        { id: 'ydjk', name: '运动健康', pinyin: 'Y', description: '运动健康交流社区', type: 'other', memberCount: 398, postCount: 276 }
+      ];
+
+      const allCategories = [...diseaseCategories, ...otherCategories];
+      localStorage.setItem(this.CATEGORIES_KEY, JSON.stringify(allCategories));
+    }
+  }
+
+  /**
+   * 获取所有社区分类
+   */
+  getCategories(): CommunityCategory[] {
+    const stored = localStorage.getItem(this.CATEGORIES_KEY);
+    return stored ? JSON.parse(stored) : [];
+  }
+
+  /**
+   * 根据类型获取社区分类
+   */
+  getCategoriesByType(type: CommunityType): CommunityCategory[] {
+    const all = this.getCategories();
+    return all.filter(c => c.type === type);
+  }
+
+  /**
+   * 获取社区详情
+   */
+  getCategoryById(id: string): CommunityCategory | null {
+    const all = this.getCategories();
+    return all.find(c => c.id === id) || null;
+  }
+
+  /**
+   * 搜索社区
+   */
+  searchCategories(keyword: string, type?: CommunityType): CommunityCategory[] {
+    const all = type ? this.getCategoriesByType(type) : this.getCategories();
+    const lowerKeyword = keyword.toLowerCase();
+    
+    return all.filter(c => 
+      c.name.toLowerCase().includes(lowerKeyword) ||
+      c.description.toLowerCase().includes(lowerKeyword)
+    );
+  }
+
+  /**
+   * 获取社区动态
+   */
+  getActivities(limit: number = 20): CommunityActivity[] {
+    const stored = localStorage.getItem(this.ACTIVITIES_KEY);
+    const activities = stored ? JSON.parse(stored) : this.generateMockActivities();
+    
+    return activities.slice(0, limit);
+  }
+
+  /**
+   * 获取社区统计
+   */
+  getStats(): CommunityStats {
+    const categories = this.getCategories();
+    const activities = this.getActivities(100);
+    const today = new Date().toDateString();
+
+    const todayActivities = activities.filter(a => 
+      new Date(a.createdAt).toDateString() === today
+    );
+
+    return {
+      totalCommunities: categories.length,
+      totalMembers: categories.reduce((sum, c) => sum + (c.memberCount || 0), 0),
+      totalPosts: categories.reduce((sum, c) => sum + (c.postCount || 0), 0),
+      totalComments: activities.filter(a => a.type === 'new_comment').length,
+      todayActive: todayActivities.length,
+      todayNewPosts: todayActivities.filter(a => a.type === 'new_post').length,
+      todayNewMembers: todayActivities.filter(a => a.type === 'new_member').length
+    };
+  }
+
+  /**
+   * 生成模拟动态
+   */
+  private generateMockActivities(): CommunityActivity[] {
+    const categories = this.getCategories();
+    const activities: CommunityActivity[] = [];
+    const now = Date.now();
+
+    for (let i = 0; i < 50; i++) {
+      const category = categories[Math.floor(Math.random() * categories.length)];
+      const type = ['new_member', 'new_post', 'new_comment', 'new_event'][Math.floor(Math.random() * 4)] as any;
+      const timeOffset = Math.random() * 7 * 24 * 60 * 60 * 1000; // 7天内
+
+      activities.push({
+        id: `act_${now - i * 3600000}`,
+        communityId: category.id,
+        communityName: category.name,
+        type,
+        content: this.getActivityContent(type, category.name),
+        userId: `user_${Math.random().toString(36).substr(2, 8)}`,
+        userName: ['张医生', '李药师', '王病友', '赵老师', '刘同学'][Math.floor(Math.random() * 5)],
+        createdAt: new Date(now - timeOffset).toISOString()
+      });
+    }
+
+    return activities.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  private getActivityContent(type: string, communityName: string): string {
+    const contents = {
+      new_member: [`加入了${communityName}社区`, `成为${communityName}新成员`],
+      new_post: [`在${communityName}发布了新帖`, `分享了经验到${communityName}`],
+      new_comment: [`评论了${communityName}的帖子`, `回复了${communityName}的讨论`],
+      new_event: [`${communityName}举办了线上活动`, `${communityName}更新了公告`]
+    };
+    const options = contents[type as keyof typeof contents];
+    return options[Math.floor(Math.random() * options.length)];
+  }
+}
+
+export const communityLifeService = new CommunityLifeService();

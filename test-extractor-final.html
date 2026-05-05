@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>医案提取器 v2.0 - 完整测试</title>
+    <meta charset="utf-8">
+    <style>
+        body { 
+            font-family: system-ui, -apple-system, sans-serif; 
+            max-width: 1000px; 
+            margin: 20px auto; 
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 { color: #2c3e50; }
+        h2 { color: #34495e; font-size: 1.2rem; margin-top: 20px; }
+        
+        .test-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .test-case-panel {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .test-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .test-btn {
+            padding: 8px 12px;
+            background: #ecf0f1;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        
+        .test-btn:hover {
+            background: #bdc3c7;
+        }
+        
+        .test-btn.active {
+            background: #3498db;
+            color: white;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 14px;
+            margin-bottom: 15px;
+            resize: vertical;
+        }
+        
+        button {
+            padding: 12px 24px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        
+        button:hover {
+            background: #219a52;
+        }
+        
+        .result-panel {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .result-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .result-label {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .result-value {
+            color: #34495e;
+            line-height: 1.5;
+        }
+        
+        .tag {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            margin-right: 6px;
+            margin-bottom: 6px;
+        }
+        
+        .tag-blue { background: #e3f2fd; color: #1976d2; }
+        .tag-green { background: #e8f5e9; color: #388e3c; }
+        .tag-red { background: #ffebee; color: #c62828; }
+        .tag-purple { background: #f3e5f5; color: #7b1fa2; }
+        .tag-orange { background: #fff3e0; color: #f57c00; }
+        
+        .confidence-bar {
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: #27ae60;
+            border-radius: 3px;
+        }
+        
+        .summary-card {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            color: #7f8c8d;
+            font-size: 0.85rem;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 8px;
+            overflow: auto;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔬 医案信息提取器 v2.0 - 完整测试</h1>
+    
+    <div class="test-container">
+        <!-- 左侧：测试用例 -->
+        <div class="test-case-panel">
+            <h2>📝 选择测试用例</h2>
+            <div class="test-buttons" id="testButtons">
+                <button class="test-btn" data-case="1">用例1：完整医案（冠心病）</button>
+                <button class="test-btn" data-case="2">用例2：简短医案（感冒）</button>
+                <button class="test-btn" data-case="3">用例3：药品说明书</button>
+                <button class="test-btn" data-case="4">用例4：不规范文本</button>
+                <button class="test-btn" data-case="5">用例5：英文医案</button>
+                <button class="test-btn" data-case="6">用例6：极简文本</button>
+            </div>
+            
+            <h2>✏️ 自定义文本</h2>
+            <textarea id="inputText" placeholder="在这里输入或修改医案文本..."></textarea>
+            
+            <button onclick="runTest()">🔍 运行提取测试</button>
+            
+            <div class="stats">
+                <span>📊 模式版本: v1.0.0</span>
+                <span>⚡ 提取耗时: <span id="extractTime">-</span>ms</span>
+            </div>
+        </div>
+        
+        <!-- 右侧：提取结果 -->
+        <div class="result-panel">
+            <h2>📊 提取结果</h2>
+            
+            <div id="result">
+                <div style="text-align: center; color: #95a5a6; padding: 40px;">
+                    点击"运行提取测试"查看结果
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 测试用例库 ====================
+        const TEST_CASES = {
+            1: `患者，男性，56岁，因"反复胸痛3天"入院。患者3天前无明显诱因出现胸痛，
+位于胸骨后，呈压榨性，持续约5-10分钟，休息后可缓解。既往有高血压病史5年。
+查体：BP 145/90mmHg，心率88次/分。
+诊断：冠心病 不稳定型心绞痛
+治疗：给予阿司匹林100mg qd，氯吡格雷75mg qd，阿托伐他汀20mg qn。
+疗效：治疗3天后胸痛症状明显缓解。`,
+
+            2: `患者头痛发热3天，诊断为上呼吸道感染，给予布洛芬治疗，症状缓解。`,
+
+            3: `【药品名称】通用名称：阿司匹林肠溶片
+【适应症】用于缓解轻至中度疼痛，如头痛、牙痛、神经痛、肌肉痛及痛经，也用于感冒、流感等发热疾病的退热。
+【用法用量】口服。成人，一次1片，若持续发热或疼痛，可间隔4-6小时重复用药1次，24小时不超过4片。
+【禁忌】对阿司匹林过敏者禁用；有活动性溃疡病或其他原因引起的消化道出血者禁用。
+【不良反应】常见胃肠道反应，如恶心、呕吐、上腹部不适或疼痛等。`,
+
+            4: `男，56岁，胸痛3天。高血压5年。诊断：冠心病。用阿司匹林治疗。效果不错。`,
+
+            5: `A 56-year-old male patient presented with chest pain for 3 days. 
+Diagnosis: Coronary heart disease. Treatment: Aspirin 100mg daily. 
+Symptoms improved significantly after treatment.`,
+
+            6: `感冒了，头痛，吃了布洛芬好了。`
+        };
+
+        // ==================== 简化版提取器 ====================
+        class SimpleExtractor {
+            extract(text) {
+                const startTime = Date.now();
+                
+                const result = {
+                    patientInfo: this.extractPatientInfo(text),
+                    symptoms: this.extractSymptoms(text),
+                    diagnosis: this.extractDiagnosis(text),
+                    treatment: this.extractTreatment(text),
+                    efficacy: this.extractEfficacy(text),
+                    medications: this.extractMedications(text),
+                    confidence: 0,
+                    rawText: text.substring(0, 100)
+                };
+                
+                result.confidence = this.calculateConfidence(result);
+                result.extractionTime = Date.now() - startTime;
+                
+                return result;
+            }
+            
+            extractPatientInfo(text) {
+                let age, gender;
+                
+                const ageMatch = text.match(/(\d+)[岁]?/);
+                if (ageMatch) age = ageMatch[1];
+                
+                if (text.includes('男')) gender = '男';
+                else if (text.includes('女')) gender = '女';
+                
+                if (age || gender) {
+                    return { age, gender, confidence: (age && gender) ? 'high' : 'medium' };
+                }
+                if (text.includes('患者')) {
+                    return { confidence: 'low', description: '提及患者' };
+                }
+                return null;
+            }
+            
+            extractSymptoms(text) {
+                const symptoms = ['发热', '头痛', '胸痛', '咳嗽', '腹痛', '关节痛', '咽痛'];
+                return symptoms.filter(s => text.includes(s));
+            }
+            
+            extractDiagnosis(text) {
+                const patterns = [
+                    /诊断[：:]\s*([^。；，\n]+)/,
+                    /诊断为\s*([^。；，\n]+)/,
+                    /(冠心病|高血压|糖尿病|肺炎|感冒|上呼吸道感染)/
+                ];
+                
+                for (let pattern of patterns) {
+                    const match = text.match(pattern);
+                    if (match) return match[1] || match[0];
+                }
+                return null;
+            }
+            
+            extractTreatment(text) {
+                const patterns = [
+                    /治疗[：:]\s*([^。；，\n]+)/,
+                    /给予\s*([^。；，\n]+)/,
+                    /用\s*([^。；，\n]+?)\s*治疗/
+                ];
+                
+                for (let pattern of patterns) {
+                    const match = text.match(pattern);
+                    if (match) return match[1];
+                }
+                return null;
+            }
+            
+            extractEfficacy(text) {
+                if (text.includes('缓解') || text.includes('好转') || text.includes('有效')) {
+                    return { result: 'positive', description: '有效', confidence: 'high' };
+                }
+                if (text.includes('无效') || text.includes('加重')) {
+                    return { result: 'negative', description: '无效', confidence: 'high' };
+                }
+                return null;
+            }
+            
+            extractMedications(text) {
+                const drugs = ['阿司匹林', '布洛芬', '头孢', '胰岛素', '二甲双胍', '氯吡格雷', '阿托伐他汀'];
+                return drugs.filter(d => text.includes(d)).map(name => ({ name, category: '其他' }));
+            }
+            
+            calculateConfidence(info) {
+                let score = 0;
+                if (info.patientInfo) score += 20;
+                if (info.symptoms.length > 0) score += 25;
+                if (info.diagnosis) score += 25;
+                if (info.treatment) score += 20;
+                if (info.efficacy) score += 10;
+                return Math.min(score, 100);
+            }
+            
+            generateSummary(info, role = 'patient') {
+                const parts = [];
+                
+                if (info.patientInfo) {
+                    if (info.patientInfo.age && info.patientInfo.gender) {
+                        parts.push(`${info.patientInfo.age}岁${info.patientInfo.gender}性患者`);
+                    }
+                }
+                
+                if (info.symptoms.length > 0) {
+                    parts.push(`症状：${info.symptoms.join('、')}`);
+                }
+                
+                if (info.diagnosis) {
+                    parts.push(`诊断：${info.diagnosis}`);
+                }
+                
+                if (info.medications.length > 0) {
+                    parts.push(`用药：${info.medications.map(m => m.name).join('、')}`);
+                }
+                
+                if (info.efficacy) {
+                    parts.push(info.efficacy.result === 'positive' ? '效果良好' : '效果不佳');
+                }
+                
+                return parts.join('。') + '。';
+            }
+        }
+
+        const extractor = new SimpleExtractor();
+
+        // ==================== UI交互 ====================
+        const inputText = document.getElementById('inputText');
+        const extractTime = document.getElementById('extractTime');
+
+        // 加载测试用例
+        document.querySelectorAll('.test-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const caseId = this.dataset.case;
+                inputText.value = TEST_CASES[caseId];
+                
+                // 高亮当前选中的按钮
+                document.querySelectorAll('.test-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                // 自动运行测试
+                runTest();
+            });
+        });
+
+        // 运行测试
+        function runTest() {
+            const text = inputText.value;
+            if (!text) return;
+            
+            const result = extractor.extract(text);
+            const summary = extractor.generateSummary(result, 'patient');
+            
+            extractTime.textContent = result.extractionTime;
+            
+            displayResult(result, summary);
+        }
+
+        // 显示结果
+        function displayResult(result, summary) {
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = `
+                <div class="result-section">
+                    <div class="result-label">📋 提取信息</div>
+                    
+                    ${result.patientInfo ? `
+                        <div class="tag tag-blue">患者信息</div>
+                        <div class="result-value">
+                            ${result.patientInfo.age ? result.patientInfo.age + '岁 ' : ''}
+                            ${result.patientInfo.gender ? result.patientInfo.gender + '性' : ''}
+                            ${result.patientInfo.description ? '(' + result.patientInfo.description + ')' : ''}
+                            <span class="tag ${result.patientInfo.confidence === 'high' ? 'tag-green' : 'tag-orange'}">
+                                可信度: ${result.patientInfo.confidence}
+                            </span>
+                        </div>
+                    ` : ''}
+                    
+                    ${result.symptoms.length > 0 ? `
+                        <div style="margin-top: 10px;">
+                            <div class="tag tag-purple">症状</div>
+                            <div class="result-value">
+                                ${result.symptoms.map(s => `<span class="tag tag-blue">${s}</span>`).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${result.diagnosis ? `
+                        <div style="margin-top: 10px;">
+                            <div class="tag tag-red">诊断</div>
+                            <div class="result-value">${result.diagnosis}</div>
+                        </div>
+                    ` : ''}
+                    
+                    ${result.treatment ? `
+                        <div style="margin-top: 10px;">
+                            <div class="tag tag-green">治疗</div>
+                            <div class="result-value">${result.treatment}</div>
+                        </div>
+                    ` : ''}
+                    
+                    ${result.efficacy ? `
+                        <div style="margin-top: 10px;">
+                            <div class="tag ${result.efficacy.result === 'positive' ? 'tag-green' : 'tag-red'}">
+                                疗效
+                            </div>
+                            <div class="result-value">
+                                ${result.efficacy.description}
+                                <span class="tag ${result.efficacy.confidence === 'high' ? 'tag-green' : 'tag-orange'}">
+                                    可信度: ${result.efficacy.confidence}
+                                </span>
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${result.medications.length > 0 ? `
+                        <div style="margin-top: 10px;">
+                            <div class="tag tag-orange">药品</div>
+                            <div class="result-value">
+                                ${result.medications.map(m => 
+                                    `<span class="tag tag-blue">${m.name}${m.category !== '其他' ? '(' + m.category + ')' : ''}</span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+                
+                <div class="result-section">
+                    <div class="result-label">📊 可信度评估</div>
+                    <div style="margin-bottom: 5px;">总体可信度: ${result.confidence}%</div>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" style="width: ${result.confidence}%;"></div>
+                    </div>
+                </div>
+                
+                <div class="summary-card">
+                    <div class="result-label" style="color: #856404;">👤 患者版摘要</div>
+                    <div class="result-value">${summary}</div>
+                </div>
+                
+                <div class="result-section">
+                    <div class="result-label">🔍 原始文本片段</div>
+                    <pre>${result.rawText}</pre>
+                </div>
+                
+                <div class="stats">
+                    <span>📦 提取时间: ${result.extractionTime}ms</span>
+                    <span>🎯 提取项: ${Object.keys(result).filter(k => result[k] && !['rawText', 'confidence', 'extractionTime'].includes(k)).length}/6</span>
+                </div>
+            `;
+        }
+
+        // 默认加载用例1
+        window.onload = () => {
+            inputText.value = TEST_CASES[1];
+            document.querySelector('[data-case="1"]').classList.add('active');
+            runTest();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,217 @@
+﻿import React, { useState, useEffect } from 'react';
+import { messageService } from '../services/messageService';
+import { MessageItem, MessageCategory } from '@/types/message';
+
+const MessagesPage: React.FC = () => {
+  const [categories, setCategories] = useState<MessageCategory[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('new_medicine');
+  const [messages, setMessages] = useState<MessageItem[]>([]);
+  const [selectedMessage, setSelectedMessage] = useState<MessageItem | null>(null);
+
+  useEffect(() => {
+    loadCategories();
+    loadMessages();
+  }, [selectedCategory]);
+
+  const loadCategories = () => {
+    const data = messageService.getCategories();
+    setCategories(data);
+  };
+
+  const loadMessages = () => {
+    const data = messageService.getMessagesByCategory(selectedCategory);
+    setMessages(data);
+  };
+
+  const handleCategorySelect = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    setSelectedMessage(null);
+  };
+
+  const handleMessageSelect = (message: MessageItem) => {
+    setSelectedMessage(message);
+    messageService.incrementViewCount(message.id);
+  };
+
+  const handleLike = (messageId: string) => {
+    messageService.likeMessage(messageId);
+    loadMessages();
+    if (selectedMessage && selectedMessage.id === messageId) {
+      setSelectedMessage({
+        ...selectedMessage,
+        likeCount: selectedMessage.likeCount + 1
+      });
+    }
+  };
+
+  const formatTime = (timeStr: string) => {
+    return new Date(timeStr).toLocaleDateString('zh-CN', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // 娑堟伅璇︽儏椤甸潰
+  if (selectedMessage) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white border-b border-gray-200 p-4">
+          <button 
+            onClick={() => setSelectedMessage(null)}
+            className="text-blue-600 hover:text-blue-800 mb-4"
+          >
+            鈫?杩斿洖鍒楄〃
+          </button>
+          <h1 className="text-xl font-bold text-gray-800">{selectedMessage.title}</h1>
+          <div className="flex items-center text-sm text-gray-500 mt-2">
+            <span>{selectedMessage.author}</span>
+            <span className="mx-2">鈥?/span>
+            <span>{formatTime(selectedMessage.publishTime)}</span>
+            <span className="mx-2">鈥?/span>
+            <span>娴忚 {selectedMessage.viewCount}</span>
+          </div>
+        </div>
+
+        <div className="p-4 bg-white">
+          <div className="prose max-w-none">
+            <p className="text-gray-700 leading-relaxed">{selectedMessage.content}</p>
+          </div>
+          
+          {/* 鏍囩 */}
+          {selectedMessage.tags && selectedMessage.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-4">
+              {selectedMessage.tags.map(tag => (
+                <span key={tag} className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* 鎿嶄綔鎸夐挳 */}
+          <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+            <button
+              onClick={() => handleLike(selectedMessage.id)}
+              className="flex items-center space-x-1 text-gray-600 hover:text-red-600"
+            >
+              <span>鉂わ笍</span>
+              <span>{selectedMessage.likeCount}</span>
+            </button>
+            <div className="flex items-center space-x-4 text-sm text-gray-500">
+              <span>馃摑 {selectedMessage.commentCount} 璇勮</span>
+              <span>馃憗锔?{selectedMessage.viewCount} 娴忚</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 璇勮鍖?*/}
+        <div className="mt-4 bg-white p-4">
+          <h3 className="font-semibold text-gray-800 mb-4">璇勮 ({selectedMessage.commentCount})</h3>
+          {selectedMessage.comments.length > 0 ? (
+            <div className="space-y-4">
+              {selectedMessage.comments.map(comment => (
+                <div key={comment.id} className="border-b border-gray-100 pb-4 last:border-0">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="font-medium text-gray-800">{comment.author}</span>
+                    <span className="text-sm text-gray-500">{formatTime(comment.time)}</span>
+                  </div>
+                  <p className="text-gray-700">{comment.content}</p>
+                  <div className="flex items-center space-x-2 mt-2">
+                    <button className="text-sm text-gray-500 hover:text-red-600">
+                      鉂わ笍 {comment.likes}
+                    </button>
+                    <button className="text-sm text-gray-500 hover:text-blue-600">
+                      鍥炲
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-8">鏆傛棤璇勮锛屽揩鏉ユ姠娌欏彂鍚</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // 娑堟伅鍒楄〃椤甸潰
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* 鍒嗙被瀵艰埅 */}
+      <div className="bg-white border-b border-gray-200 p-4">
+        <h1 className="text-xl font-semibold text-gray-800 mb-4">娑堟伅</h1>
+        <div className="flex space-x-2 overflow-x-auto pb-2">
+          {categories.map(category => (
+            <button
+              key={category.id}
+              onClick={() => handleCategorySelect(category.id)}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-full whitespace-nowrap transition-colors ${
+                selectedCategory === category.id
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <span>{category.icon}</span>
+              <span>{category.name}</span>
+              <span className="text-sm opacity-80">({category.count})</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 娑堟伅鍒楄〃 */}
+      <div className="p-4 space-y-4">
+        {messages.map(message => (
+          <div
+            key={message.id}
+            onClick={() => handleMessageSelect(message)}
+            className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 hover:border-blue-200 cursor-pointer transition-colors"
+          >
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="font-semibold text-gray-800 flex-1 pr-2">{message.title}</h3>
+              {message.isPinned && (
+                <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">缃《</span>
+              )}
+            </div>
+            
+            <p className="text-gray-600 text-sm line-clamp-2 mb-3">{message.content}</p>
+            
+            <div className="flex justify-between items-center text-sm text-gray-500">
+              <div className="flex items-center space-x-4">
+                <span>{message.author}</span>
+                <span>{formatTime(message.publishTime)}</span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <span className="flex items-center space-x-1">
+                  <span>鉂わ笍</span>
+                  <span>{message.likeCount}</span>
+                </span>
+                <span className="flex items-center space-x-1">
+                  <span>馃挰</span>
+                  <span>{message.commentCount}</span>
+                </span>
+                <span className="flex items-center space-x-1">
+                  <span>馃憗锔?/span>
+                  <span>{message.viewCount}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {messages.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-gray-300 text-6xl mb-4">馃摑</div>
+            <p className="text-gray-500">鏆傛棤鍐呭</p>
+            <p className="text-sm text-gray-400 mt-1">璇ュ垎绫讳笅杩樻病鏈夊彂甯冨唴瀹?/p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default MessagesPage;

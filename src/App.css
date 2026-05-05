@@ -1,0 +1,168 @@
+/* App.css */
+.App {
+  text-align: center;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+/* 应用容器 */
+.app-container {
+  max-width: 100%;
+  min-height: 100vh;
+  margin: 0 auto;
+  background: white;
+  position: relative;
+}
+
+/* 应用头部 */
+.app-header {
+  background: #2E8B57;
+  color: white;
+  padding: 12px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* 主内容区域 */
+.app-main {
+  min-height: calc(100vh - 120px);
+  padding-bottom: 60px; /* 为底部导航留出空间 */
+}
+
+/* 移动端底部导航 */
+.app-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  padding: 8px 0;
+  z-index: 1000;
+}
+
+.nav-item {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 8px;
+  font-size: 12px;
+  color: #666;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.nav-item.active {
+  color: #2E8B57;
+}
+
+.nav-item:hover {
+  color: #2E8B57;
+}
+
+/* 全局加载状态 */
+.global-loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.global-loading .loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #2E8B57;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+.global-loading span {
+  color: #2E8B57;
+  font-size: 14px;
+}
+
+/* 404页面 */
+.not-found {
+  padding: 60px 20px;
+  text-align: center;
+  color: #666;
+}
+
+.not-found h2 {
+  color: #2E8B57;
+  margin-bottom: 16px;
+}
+
+/* 动画 */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 移动端响应式设计 */
+@media (max-width: 768px) {
+  .app-container {
+    box-shadow: none;
+  }
+  
+  .app-main {
+    padding-bottom: 0; /* 如果没有底部导航，可以设置为0 */
+  }
+}
+
+/* 平板设备 */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .app-container {
+    max-width: 768px;
+    margin: 0 auto;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+}
+
+/* 桌面设备 */
+@media (min-width: 1025px) {
+  .app-container {
+    max-width: 1024px;
+    margin: 0 auto;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+}
+
+/* 深色模式支持 - 可后续实现 */
+@media (prefers-color-scheme: dark) {
+  .App {
+    background-color: #121212;
+  }
+  
+  .app-container {
+    background: #1e1e1e;
+    color: #ffffff;
+  }
+  
+  .app-bottom-nav {
+    background: #2d2d2d;
+    border-top-color: #404040;
+  }
+  
+  .nav-item {
+    color: #cccccc;
+  }
+}

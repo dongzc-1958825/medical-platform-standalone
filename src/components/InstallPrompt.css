@@ -1,0 +1,77 @@
+.install-prompt-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  padding: 20px;
+}
+
+.install-prompt {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+  max-width: 300px;
+  width: 100%;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.install-prompt-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.install-prompt h3 {
+  margin: 0 0 8px 0;
+  color: #2E8B57;
+  font-size: 18px;
+}
+
+.install-prompt p {
+  margin: 0 0 20px 0;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.install-prompt-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.install-button {
+  flex: 1;
+  background: #2E8B57;
+  color: white;
+  border: none;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.install-button:hover {
+  background: #26734d;
+}
+
+.cancel-button {
+  flex: 1;
+  background: transparent;
+  border: 1px solid #ddd;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  color: #666;
+}
+
+.cancel-button:hover {
+  background: #f5f5f5;
+}

@@ -1,0 +1,121 @@
+import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { 
+  FileText, 
+  MessageSquare, 
+  Users, 
+  Bell, 
+  User,
+  Search
+} from 'lucide-react';
+// 注意：HomePage不应该导入Logo，因为Logo已经在DesktopLayout中
+
+const HomePage: React.FC = () => {
+  const { user } = useAuth(); // 移除logout，因为不需要在这里处理
+  const navigate = useNavigate();
+
+  // 五大核心功能
+  const mainFeatures = [
+    { id: 'cases', title: '医案分享', icon: FileText, path: '/desktop/cases' },
+    { id: 'consult', title: '寻医问药', icon: MessageSquare, path: '/desktop/consult' },
+    { id: 'community', title: '专家社区', icon: Users, path: '/desktop/community' },
+    { id: 'messages', title: '消息', icon: Bell, path: '/desktop/messages' },
+    { id: 'profile', title: '我的', icon: User, path: '/desktop/profile' }
+  ];
+
+  return (
+    // 重要：HomePage只包含页面内容，不包含任何布局元素
+    <div className="home-page-content">
+      {/* 注意：这里没有header！header由DesktopLayout提供 */}
+      
+      {/* 主内容区域 */}
+      <div className="container mx-auto px-4 py-8">
+        {/* 搜索框 */}
+        <div className="mb-12">
+          <div className="max-w-lg mx-auto">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="搜索医案、医生、疾病..."
+                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* 欢迎语 */}
+        <div className="text-center mb-12">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">
+            欢迎使用众创医案平台
+          </h1>
+          <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+            打破医疗信息壁垒，共享医学智慧，构建医患共创的医案知识库
+          </p>
+        </div>
+
+        {/* 五大功能网格 */}
+        <div className="max-w-5xl mx-auto mb-16">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+            {mainFeatures.map(feature => {
+              const Icon = feature.icon;
+              return (
+                <Link
+                  key={feature.id}
+                  to={feature.path}
+                  className="group block"
+                >
+                  <div className="bg-white border border-gray-200 rounded-xl p-6 text-center hover:shadow-lg hover:border-blue-400 transition-all duration-300 h-full">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-full flex items-center justify-center group-hover:from-blue-100 group-hover:to-blue-200">
+                      <Icon className="w-8 h-8 text-blue-600" />
+                    </div>
+                    <div className="text-lg font-semibold text-gray-900 mb-2">
+                      {feature.title}
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      {feature.id === 'cases' && '查看和分享临床医案'}
+                      {feature.id === 'consult' && '获取专业医疗建议'}
+                      {feature.id === 'community' && '加入专科讨论社区'}
+                      {feature.id === 'messages' && '查看通知和消息'}
+                      {feature.id === 'profile' && '个人设置和资料'}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 平台价值展示 */}
+        <div className="bg-gradient-to-r from-blue-50 to-white rounded-2xl p-8 mb-12">
+          <h2 className="text-2xl font-bold text-center mb-8 text-gray-900">平台价值</h2>
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            <div className="space-y-3">
+              <h3 className="text-xl font-semibold text-gray-900 flex items-center">
+                <span className="mr-2">🤝</span> 医患共创
+              </h3>
+              <p className="text-gray-700 leading-relaxed">
+                医生贡献临床经验，患者反馈治疗效果，共同构建真实可靠的医案数据库，
+                让每一次诊疗经验都能为他人提供参考。
+              </p>
+            </div>
+            <div className="space-y-3">
+              <h3 className="text-xl font-semibold text-gray-900 flex items-center">
+                <span className="mr-2">🌐</span> 信息透明
+              </h3>
+              <p className="text-gray-700 leading-relaxed">
+                打破医疗机构间的信息壁垒，让优质医疗经验得以共享和传承，
+                促进医学知识的集体演进和进步。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 注意：这里也没有footer！如果需要footer，应该在DesktopLayout中添加 */}
+    </div>
+  );
+};
+
+export default HomePage;

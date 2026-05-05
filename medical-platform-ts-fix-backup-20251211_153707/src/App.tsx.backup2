@@ -1,0 +1,95 @@
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import './App.css';
+
+// 桌面端布局与页面
+import MainLayout from './components/layout/MainLayout';
+import CasesPage from './pages/desktop/CasesPage';
+import LoginPage from './pages/desktop/LoginPage';
+import ProfilePage from './pages/desktop/ProfilePage';
+
+// 移动端布局与页面
+import MobileLayout from './components/layout/MobileLayout';
+import MobileCasesPage from './pages/mobile/MobileCasesPage';
+import MobileCommunityPage from './pages/mobile/MobileCommunityPage';
+import MobileConsultPage from './pages/mobile/MobileConsultPage';
+import MobileMessagesPage from './pages/mobile/MobileMessagesPage';
+import MobileProfilePage from './pages/mobile/MobileProfilePage';
+
+// 认证上下文
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+
+// 受保护的路由组件
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user } = useAuth();
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
+function App() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
+
+  return (
+    <AuthProvider>
+      <Router basename="/medical-platform">
+        <Routes>
+          {/* 登录页面（独立布局） */}
+          <Route path="/login" element={<LoginPage />} />
+          
+          {/* 桌面端路由 */}
+          <Route 
+            path="/" 
+            element={
+              <ProtectedRoute>
+                <MainLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="/cases" replace />} />
+            <Route path="cases" element={<CasesPage />} />
+            <Route path="profile" element={<ProfilePage />} />
+          </Route>
+          
+          {/* 移动端路由 */}
+          <Route 
+            path="/mobile" 
+            element={
+              <ProtectedRoute>
+                <MobileLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="/mobile/cases" />} />
+            <Route path="cases" element={<MobileCasesPage />} />
+            <Route path="community" element={<MobileCommunityPage />} />
+            <Route path="consult" element={<MobileConsultPage />} />
+            <Route path="messages" element={<MobileMessagesPage />} />
+            <Route path="profile" element={<MobileProfilePage />} />
+          </Route>
+          
+          {/* 404 重定向 */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
+  );
+}
+
+export default App;
